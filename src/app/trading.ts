@@ -4,8 +4,6 @@ import { Logger } from "@nestjs/common";
 import { KujiraService } from "../kujira.service";
 import { v4 as uuid } from "uuid";
 import { TelegramService } from "nestjs-telegram";
-import { EMPTY, forkJoin, Observable } from "rxjs";
-import * as Telegram from "nestjs-telegram/dist/interfaces/telegramTypes.interface";
 
 export class Trading {
   private readonly logger = new Logger(Trading.name);
@@ -143,8 +141,7 @@ export class Trading {
         message = orders
           .sort((n1, n2) => this.desc(n1.price, n2.price))
           .map(o => `${o.side} ${o.amount.toFixed(4)} ${o.side === 'Sell' ? this.baseSymbol : this.quoteSymbol} at ${o.price.toFixed(this._contract.price_precision.decimal_places)} ${this.quoteSymbol}`).join('\n');
-        this.sendMessage(`Orders\n${message}`)
-          .subscribe()
+        this.sendMessage(`Orders\n${message}`);
         this._state = ClientState.ORDER_CHECK;
         return;
       case ClientState.ORDER_CHECK:
@@ -178,10 +175,8 @@ export class Trading {
         await this._service.ordersWithdraw(this._wallet, this._contract, fulfilledOrders);
         await this._service.ordersCancel(this._wallet, this._contract, unfilledOrders);
         this._state = ClientState.ORDER;
-        forkJoin([
-          this.sendMessage(`Withdraw\n${fulfilledOrders.map(o => `${o.idx}`).join(',')}`),
-          this.sendMessage(`Cancel\n${unfilledOrders.map(o => `${o.idx}`).join(',')}`)
-        ]).subscribe()
+        this.sendMessage(`Withdraw\n${fulfilledOrders.map(o => `${o.idx}`).join(',')}`);
+        this.sendMessage(`Cancel\n${unfilledOrders.map(o => `${o.idx}`).join(',')}`);
         return;
       case ClientState.MARKET_ORDER_CHECK:
         // 즉시 거래가능한 지정가 거래이므로, 주문을 모두 회수하고 ORDER 로 상태 변경한다.
@@ -317,11 +312,11 @@ export class Trading {
     this._wallet = await this._service.reconnect(this._wallet)
   }
 
-  sendMessage(message: string): Observable<Telegram.TelegramMessage> {
+  sendMessage(message: string): void {
     if (!this.CHAT_ID) {
-      return EMPTY;
+      return;
     }
-    return this.telegram.sendMessage({ chat_id: this.CHAT_ID, text: message }) as any
+    this.telegram.sendMessage({ chat_id: this.CHAT_ID, text: message }).subscribe()
   }
 }
 
