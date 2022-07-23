@@ -162,12 +162,14 @@ export class Trading {
         unfilledOrders = this.currentOrders.filter(o => o.state !== 'Closed');
         this.actions.push(`[orders] withdraw: ${JSON.stringify(fulfilledOrders.map(o => o.idx).join(','))}`);
         this.actions.push(`[orders] cancel: ${JSON.stringify(unfilledOrders.map(o => o.idx).join(','))}`);
-        await this._service.ordersWithdraw(this._wallet, this._contract, fulfilledOrders);
-        if (fulfilledOrders.length > 0)
+        if (fulfilledOrders.length > 0) {
+          await this._service.ordersWithdraw(this._wallet, this._contract, fulfilledOrders);
           this.sendMessage(`Withdraw\n${fulfilledOrders.map(o => `${o.idx}`).join(',')}`);
-        await this._service.ordersCancel(this._wallet, this._contract, unfilledOrders);
-        if (unfilledOrders.length > 0)
+        }
+        if (unfilledOrders.length > 0) {
+          await this._service.ordersCancel(this._wallet, this._contract, unfilledOrders);
           this.sendMessage(`Cancel\n${unfilledOrders.map(o => `${o.idx}`).join(',')}`);
+        }
         this._state = ClientState.ORDER;
         return;
       case ClientState.MARKET_ORDER_CHECK:
