@@ -98,7 +98,7 @@ export class Trading {
             const curTot = this.balanceBase * marketPrice + this.balanceQuote;
             const tot = this.balanceBase * price + this.balanceQuote;
             this.logger.debug(`value will change from ${curTot}(${marketPrice}) to ${tot}(${price})`)
-            // 변동자산가치에서 목표비율을 곱해 목표가의 갯수를{baseQuan}를 계산한다.
+            // 변동자산가치에서 목표비율을 곱해 목표가의 갯수를{base}를 계산한다.
             const base = tot * this._targetRate / price;
             // 목표수량과 현재 수량만큼의 차이인 주문수량{dq1, dq2} 계산한다.
             const dq = base - this.balanceBase;
@@ -114,13 +114,13 @@ export class Trading {
           tps = tps.filter(tp => tp.normal);
         }
         // 주문수량의 주문정보{o}를 생성한다.
-        const sellOrders = tps.filter(tp => tp.rate > 0)
+        const sellOrders = tps.filter(tp => tp.dq < 0)
           .sort((n1, n2) => this.asc(n1.price, n2.price));
-        const buyOrders = tps.filter(tp => tp.rate < 0)
+        const buyOrders = tps.filter(tp => tp.dq > 0)
           .sort((n1, n2) => this.desc(n1.price, n2.price));
         const orders = [
-          ...this.toOrderRequests(this._contract, sellOrders),
-          ...this.toOrderRequests(this._contract, buyOrders)
+          ...this.toOrderRequests(this._contract, sellOrders, 'Sell'),
+          ...this.toOrderRequests(this._contract, buyOrders, 'Buy')
         ];
         // TODO 주문정보{o} 시장가로 거래 가능한지 판단한다.
         // TODO 시장가로 거래가 가능할 경우: 주문 후 MARKET_ORDER_CHECK 로 변경
@@ -252,7 +252,7 @@ export class Trading {
     this.actions.push(`[market] price: ${this._marketPrice}, rate: ${this._marketRate}`)
   }
 
-  toOrderRequests(contract: Contract, orders: OrderMarketMaking[]): OrderRequest[] {
+  toOrderRequests(contract: Contract, orders: OrderMarketMaking[], side: OrderSide): OrderRequest[] {
     let prevQuantities = 0;
     return orders
       .map(o => {
@@ -265,7 +265,6 @@ export class Trading {
         return o2;
       })
       .map(o => {
-        const side = o.rate > 0 ? 'Sell' : 'Buy';
         const amount = Math.abs(side === 'Sell' ? o.dq : (o.dq * o.price));
         return {
           uuid: uuid(),
