@@ -146,11 +146,6 @@ export class Trading {
           this._state = ClientState.ORDER;
           return;
         }
-        // 주문 회수에 실패한 경우
-        if (this.currentOrders.length !== this._deltaRates.length * 2) {
-          this._state = ClientState.CANCEL_ALL_ORDERS;
-          return;
-        }
         fulfilledOrders = this.currentOrders.filter(o => o.state === 'Closed');
         unfilledOrders = this.currentOrders.filter(o => o.state !== 'Closed');
         // 진행중인 주문이 있는 경우, {n}개의 주문이 완료됨을 기다린다.
@@ -167,14 +162,16 @@ export class Trading {
         fulfilledOrders = this.currentOrders.filter(o => o.state === 'Closed');
         unfilledOrders = this.currentOrders.filter(o => o.state !== 'Closed');
         if (fulfilledOrders.length > 0) {
-          this.actions.push(`[orders] withdraw: ${JSON.stringify(fulfilledOrders.map(o => o.idx).join(','))}`);
+          message = `[orders] withdraw: ${JSON.stringify(fulfilledOrders.map(o => o.idx).join(','))}`;
+          this.actions.push(message);
           await this._service.ordersWithdraw(this._wallet, this._contract, fulfilledOrders);
-          this.sendMessage(`Withdraw\n${fulfilledOrders.map(o => `${o.idx}`).join(',')}`);
+          this.sendMessage(message);
         }
         if (unfilledOrders.length > 0) {
-          this.actions.push(`[orders] cancel: ${JSON.stringify(unfilledOrders.map(o => o.idx).join(','))}`);
+          message = `[orders] cancel: ${JSON.stringify(unfilledOrders.map(o => o.idx).join(','))}`;
+          this.actions.push();
           await this._service.ordersCancel(this._wallet, this._contract, unfilledOrders);
-          this.sendMessage(`Cancel\n${unfilledOrders.map(o => `${o.idx}`).join(',')}`);
+          this.sendMessage(message);
         }
         this._state = ClientState.ORDER;
         return;
