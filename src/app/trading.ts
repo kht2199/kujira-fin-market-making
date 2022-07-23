@@ -110,18 +110,8 @@ export class Trading {
         const notNormal = tps.filter(tp => !tp.normal);
         if (notNormal.length > 0) {
           this.logger.warn(`[price] found gap between market price{${marketPrice}} and order price{${notNormal[0].price}}`)
-          this._state = ClientState.WAITING_ALL_ORDER_COMPLETE;
-          const order = notNormal.sort((o1, o2) =>
-            // if buy order is not normal, sell at maximum buy order price.
-            o1.rate > 0 // buy order
-              ? this.desc(o1.price, o2.price) // get maximum price
-              : this.asc(o1.price, o2.price) // get minimum
-          )[0];
-          order.rate = -1 * order.rate;
-          const orders = this.toOrderRequests(this._contract, [order]);
-          this.logger.log(`[orders] request: ${JSON.stringify(orders)}`);
-          await this._service.orders(this._wallet, orders);
-          return;
+          // execute orders.
+          notNormal.forEach(n => n.rate = -1 * n.rate)
         }
         // 주문수량의 주문정보{o}를 생성한다.
         const sellOrders = tps.filter(tp => tp.rate > 0)
