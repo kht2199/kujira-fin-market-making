@@ -87,7 +87,7 @@ export class Trading {
         await this.market();
         const marketPrice = this._marketPrice;
         this.logger.debug(`balance rate at current is ${this.balanceBase * marketPrice / (this.balanceBase * marketPrice + this.balanceQuote)}`)
-        const tps: OrderMarketMaking[] = this._deltaRates
+        let tps: OrderMarketMaking[] = this._deltaRates
           .map(r => [r, -r]).flat()
           .map(r => {
             // 자산비율이 주문비율{1%,2%}에 해당하는 목표가격을 {tp1, tp2} 찾는다.
@@ -111,6 +111,7 @@ export class Trading {
         if (notNormal.length > 0) {
           this.logger.warn(`[price] found gap between market price{${marketPrice}} and order price{${notNormal[0].price}}`)
           // execute orders.
+          tps = tps.filter(tp => tp.normal);
         }
         // 주문수량의 주문정보{o}를 생성한다.
         const sellOrders = tps.filter(tp => tp.rate > 0)
