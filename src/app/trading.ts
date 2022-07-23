@@ -16,27 +16,15 @@ export class Trading {
 
   private _balanceRate: number;
 
-  private balanceTotal: number;
-
   private readonly baseSymbol: string;
 
   private readonly quoteSymbol: string;
 
-  private _marketPrice: number;
-
-  private _marketRate: number;
-
   public ongoing: boolean = false;
-
-  private actions: string[] = [];
 
   private _targetRate: number | undefined;
 
   private currentOrders: Order[];
-
-  private lastMarketQueried = new Date();
-
-  private lastBalanceQueried = new Date();
 
   private CHAT_ID: string = process.env.TELEGRAM_CHAT_ID;
 
@@ -59,10 +47,11 @@ export class Trading {
     let message;
     let fulfilledOrders: Order[];
     let unfilledOrders: Order[];
+    let marketPrice: number;
     switch (this._state) {
       case ClientState.INITIALIZE:
-        await this.market();
-        await this.balances();
+        marketPrice = await this.getMarketPrice();
+        await this.balances(marketPrice);
         if (Math.abs(this._balanceRate - this._targetRate) >= this._deltaRates[0]) {
           throw new Error(`current rate[${this._balanceRate}] is greater than config rate[${this._deltaRates[0]}].`);
         }
@@ -79,8 +68,8 @@ export class Trading {
         return;
       case ClientState.ORDER:
         // TODO market price caching.
-        await this.market();
-        const marketPrice = this._marketPrice;
+        marketPrice = await this.getMarketPrice();
+        await this.balances(marketPrice)
         this.logger.debug(`balance rate at current is ${this.balanceBase * marketPrice / (this.balanceBase * marketPrice + this.balanceQuote)}`)
         let tps: OrderMarketMaking[] = this._deltaRates
           .map(r => [r, -r]).flat()
@@ -145,7 +134,7 @@ export class Trading {
           return;
         }
         const idxs = this.currentOrders.map(o => o.idx);
-        this.actions.push(`[order state] idxs: ${idxs.join(',')} fulfilled orders: ${fulfilledOrders.length}`)
+        this.logger.log(`[order state] idxs: ${idxs.join(',')} fulfilled orders: ${fulfilledOrders.length}`)
         return;
       case ClientState.FULFILLED_ORDERS:
       case ClientState.CANCEL_ALL_ORDERS:
@@ -154,13 +143,13 @@ export class Trading {
         unfilledOrders = this.currentOrders.filter(o => o.state !== 'Closed');
         if (fulfilledOrders.length > 0) {
           message = `[orders] withdraw: ${JSON.stringify(fulfilledOrders.map(o => o.idx).join(','))}`;
-          this.actions.push(message);
+          this.logger.log(message);
           await this._service.ordersWithdraw(this._wallet, this._contract, fulfilledOrders);
           this.sendMessage(message);
         }
         if (unfilledOrders.length > 0) {
           message = `[orders] cancel: ${JSON.stringify(unfilledOrders.map(o => o.idx).join(','))}`;
-          this.actions.push();
+          this.logger.log(message);
           await this._service.ordersCancel(this._wallet, this._contract, unfilledOrders);
           this.sendMessage(message);
         }
@@ -186,11 +175,7 @@ export class Trading {
     return this._service.getOrders(this._wallet, this._contract)
   }
 
-  async balances() {
-    const SEC = 1_000
-    if (!this.balanceBase && new Date().getTime() - this.lastBalanceQueried.getTime() < 5 * SEC) {
-      return;
-    }
+  async balances(marketPrice: number) {
     const balances = await this._service.fetchBalances(
       this._wallet,
       this._contract,
@@ -207,18 +192,17 @@ export class Trading {
     }
     const bAmount = Number(base.amount);
     const qAmount = Number(quote.amount);
-    const {rate, totalValue} = this.balanceStat(bAmount, qAmount, this._marketPrice);
+    const {rate, totalValue} = this.getBalanceStat(bAmount, qAmount, marketPrice);
     this._balanceRate = rate;
     this.balanceBase = bAmount;
     this.balanceQuote = qAmount;
-    this.balanceTotal = totalValue;
     if (!this._targetRate) {
       this._targetRate = this._balanceRate;
     }
-    this.actions.push(`[balances] base/quote: ${bAmount}${this.baseSymbol}/${qAmount}${this.quoteSymbol}, balanceTotal: ${totalValue}${this.quoteSymbol}, balanceRate: ${rate}, targetRate: ${this._targetRate}`);
+    this.logger.log(`[balances] base/quote: ${bAmount}${this.baseSymbol}/${qAmount}${this.quoteSymbol}, balanceTotal: ${totalValue}${this.quoteSymbol}, balanceRate: ${rate}, targetRate: ${this._targetRate}`);
   }
 
-  balanceStat(base: number, quote: number, price: number) {
+  getBalanceStat(base: number, quote: number, price: number) {
     const baseValue = base * price;
     const totalValue = baseValue + quote;
     return {
@@ -228,12 +212,7 @@ export class Trading {
     }
   }
 
-  async market() {
-    const SEC = 1_000
-    if (!this._marketPrice && new Date().getTime() - this.lastMarketQueried.getTime() < 5 * SEC) {
-      return;
-    }
-    this.lastMarketQueried = new Date()
+  async getMarketPrice() {
     const orders = await this._service.books(this._wallet, this._contract, {
       limit: 1,
     });
@@ -241,9 +220,9 @@ export class Trading {
     if (orders.quote.length !== 1) throw new Error('orders.quote.length !== 1');
     const base = Number(orders.base[0].quote_price);
     const quote = Number(orders.quote[0].quote_price);
-    this._marketPrice = (base + quote) / 2;
-    this._marketRate = base * this._marketPrice / (base * this._marketPrice + base);
-    this.actions.push(`[market] price: ${this._marketPrice}, rate: ${this._marketRate}`)
+    const marketPrice = (base + quote) / 2;
+    this.logger.log(`[market] price: ${marketPrice}`)
+    return marketPrice;
   }
 
   toOrderRequests(contract: Contract, orders: OrderMarketMaking[], side: OrderSide): OrderRequest[] {
@@ -284,14 +263,11 @@ export class Trading {
   }
 
   public printEnd(beforeState: ClientState) {
-    this.actions.forEach(a => this.logger.log(a));
     if (beforeState !== this._state) {
       this.logger.log(`[end] ${beforeState} => ${this._state}`)
     } else {
       this.logger.log(`[end] ${this._state}`)
     }
-    if (this.actions.length !== 0)
-      this.actions = [];
   }
 
   async reconnect() {
