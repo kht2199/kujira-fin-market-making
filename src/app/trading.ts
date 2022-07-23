@@ -78,12 +78,6 @@ export class Trading {
         this._state = ClientState.ORDER;
         return;
       case ClientState.ORDER:
-        // 진행중인 주문이 있으면, ORDER_CHECK 로 변경한다.
-        this.currentOrders = await this.getOrders();
-        if (this.currentOrders.length > 0) {
-          this._state = ClientState.ORDER_CHECK;
-          return;
-        }
         // TODO market price caching.
         await this.market();
         const marketPrice = this._marketPrice;
