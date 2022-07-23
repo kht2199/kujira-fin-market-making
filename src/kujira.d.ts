@@ -72,7 +72,6 @@ declare global {
     tot: number;
     base: number;
     dq: number;
-    rate: number;
     normal: boolean;
   }
 }

@@ -63,7 +63,6 @@ export class Trading {
       case ClientState.INITIALIZE:
         await this.market();
         await this.balances();
-        // 자산비율(balance rate)와 설정비율을 확인해서 {n%} 이상 차이날 경우, 실행하지 않는다.
         if (Math.abs(this._balanceRate - this._targetRate) >= this._deltaRates[0]) {
           throw new Error(`current rate[${this._balanceRate}] is greater than config rate[${this._deltaRates[0]}].`);
         }
@@ -107,7 +106,7 @@ export class Trading {
             this.logger.debug(`quantity will change from ${this.balanceBase} to ${base}, delta is ${dq}`)
             // 부호가 다르면, 가격 이격이 발생.
             const normal = r * dq < 0;
-            return { price, tot, base, dq, rate: r, normal};
+            return { price, tot, base, dq, normal};
           });
         const notNormal = tps.filter(tp => !tp.normal);
         if (notNormal.length > 0) {
