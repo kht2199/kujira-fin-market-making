@@ -147,7 +147,7 @@ export class Trading {
         fulfilledOrders = this.currentOrders.filter(o => o.state === 'Closed');
         unfilledOrders = this.currentOrders.filter(o => o.state !== 'Closed');
         // 진행중인 주문이 있는 경우, {n}개의 주문이 완료됨을 기다린다.
-        if (fulfilledOrders.length >= this._deltaRates.length) {
+        if (fulfilledOrders.length >= this.currentOrders.length / 2) {
           this._state = ClientState.FULFILLED_ORDERS;
           return;
         }
