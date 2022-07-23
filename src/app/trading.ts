@@ -111,7 +111,6 @@ export class Trading {
         if (notNormal.length > 0) {
           this.logger.warn(`[price] found gap between market price{${marketPrice}} and order price{${notNormal[0].price}}`)
           // execute orders.
-          notNormal.forEach(n => n.rate = -1 * n.rate)
         }
         // 주문수량의 주문정보{o}를 생성한다.
         const sellOrders = tps.filter(tp => tp.rate > 0)
