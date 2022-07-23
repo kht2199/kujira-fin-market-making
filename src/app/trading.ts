@@ -68,7 +68,7 @@ export class Trading {
         // 진행중인 주문이 있으면, ORDER_CHECK 로 변경한다.
         this.currentOrders = await this.getOrders();
         if (this.currentOrders.length === 1) {
-          this._state = ClientState.WAITING_ALL_ORDER_COMPLETE;
+          this._state = ClientState.CANCEL_ALL_ORDERS;
           return;
         } else if (this.currentOrders.length > 1) {
           this._state = ClientState.ORDER_CHECK;
