@@ -112,8 +112,6 @@ export class Trading {
         const notNormal = tps.filter(tp => !tp.normal);
         if (notNormal.length > 0) {
           this.logger.warn(`[price] found gap between market price{${marketPrice}} and order price{${notNormal[0].price}}`)
-          // execute orders.
-          tps = tps.filter(tp => tp.normal);
         }
         // 주문수량의 주문정보{o}를 생성한다.
         const sellOrders = tps.filter(tp => tp.dq < 0)
