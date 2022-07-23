@@ -40,6 +40,8 @@ export class Trading {
 
   private CHAT_ID: string = process.env.TELEGRAM_CHAT_ID;
 
+  private preparedOrders: OrderRequest[] = [];
+
   constructor(
     private readonly telegram: TelegramService,
     private readonly _service: KujiraService,
@@ -118,7 +120,7 @@ export class Trading {
           .sort((n1, n2) => this.asc(n1.price, n2.price));
         const buyOrders = tps.filter(tp => tp.dq > 0)
           .sort((n1, n2) => this.desc(n1.price, n2.price));
-        const orders = [
+        this.preparedOrders = [
           ...this.toOrderRequests(this._contract, sellOrders, 'Sell'),
           ...this.toOrderRequests(this._contract, buyOrders, 'Buy')
         ];
@@ -126,13 +128,17 @@ export class Trading {
         // TODO 시장가로 거래가 가능할 경우: 주문 후 MARKET_ORDER_CHECK 로 변경
         // 시장가로 거래가 가능하지 않을 경우:
         // 주문정보{o} 실행한다.
-        this.logger.log(`[orders] ${JSON.stringify(orders)}`);
-        await this._service.orders(this._wallet, orders);
-        message = orders
+        this._state = ClientState.ORDER_PREPARED;
+        return this.next();
+      case ClientState.ORDER_PREPARED:
+        this.logger.log(`[orders] ${JSON.stringify(this.preparedOrders)}`);
+        await this._service.orders(this._wallet, this.preparedOrders);
+        message = this.preparedOrders
           .sort((n1, n2) => this.desc(n1.price, n2.price))
           .map(o => `${o.side} ${o.amount.toFixed(4)} ${o.side === 'Sell' ? this.baseSymbol : this.quoteSymbol} at ${o.price.toFixed(this._contract.price_precision.decimal_places)} ${this.quoteSymbol}`).join('\n');
         this.sendMessage(`Orders\n${message}`);
         this._state = ClientState.ORDER_CHECK;
+        this.preparedOrders = [];
         return;
       case ClientState.ORDER_CHECK:
         this.currentOrders = await this.getOrders();
@@ -316,6 +322,7 @@ export class Trading {
 enum ClientState {
   INITIALIZE = 'INITIALIZE',
   ORDER = 'ORDER',
+  ORDER_PREPARED = 'ORDER_PREPARED',
   FULFILLED_ORDERS = 'FULFILLED_ORDERS',
   CANCEL_ALL_ORDERS = 'CANCEL_ALL_ORDERS',
   ORDER_CHECK = 'ORDER_CHECK',
