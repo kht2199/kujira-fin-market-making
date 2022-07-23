@@ -29,7 +29,6 @@
     "@nestjs/schedule": "^2.1.0",
     "axios-cache-adapter": "^2.7.3",
     "cross-env": "^7.0.3",
-    "dotenv": "^16.0.1",
     "kujira.js": "https://github.com/Team-Kujira/kujira.js.git",
     "nestjs-telegram": "^1.2.0",
     "reflect-metadata": "^0.1.13",

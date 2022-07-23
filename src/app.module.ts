@@ -13,7 +13,7 @@ import { TelegramModule } from "nestjs-telegram";
     HttpModule,
     ScheduleModule.forRoot(),
     ConfigModule.forRoot({
-      envFilePath: [`.env.${process.env.NODE_ENV}`],
+      envFilePath: [`.env.${process.env.NODE_ENV}`, '.env'],
     }),
     TelegramModule.forRoot({
       botKey: process.env.TELEGRAM_BOT
