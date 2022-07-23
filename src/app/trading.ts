@@ -163,10 +163,12 @@ export class Trading {
         this.actions.push(`[orders] withdraw: ${JSON.stringify(fulfilledOrders.map(o => o.idx).join(','))}`);
         this.actions.push(`[orders] cancel: ${JSON.stringify(unfilledOrders.map(o => o.idx).join(','))}`);
         await this._service.ordersWithdraw(this._wallet, this._contract, fulfilledOrders);
+        if (fulfilledOrders.length > 0)
+          this.sendMessage(`Withdraw\n${fulfilledOrders.map(o => `${o.idx}`).join(',')}`);
         await this._service.ordersCancel(this._wallet, this._contract, unfilledOrders);
+        if (unfilledOrders.length > 0)
+          this.sendMessage(`Cancel\n${unfilledOrders.map(o => `${o.idx}`).join(',')}`);
         this._state = ClientState.ORDER;
-        this.sendMessage(`Withdraw\n${fulfilledOrders.map(o => `${o.idx}`).join(',')}`);
-        this.sendMessage(`Cancel\n${unfilledOrders.map(o => `${o.idx}`).join(',')}`);
         return;
       case ClientState.MARKET_ORDER_CHECK:
         // 즉시 거래가능한 지정가 거래이므로, 주문을 모두 회수하고 ORDER 로 상태 변경한다.
