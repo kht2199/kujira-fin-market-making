@@ -9,6 +9,7 @@ import { KujiraClientService } from "./kujira-client-service";
 import { TradingState } from "../app/trading-state";
 import { v4 as uuid } from "uuid";
 import { TradingBalance } from "../app/trading-balance";
+import { TradingOrders } from "../app/trading-orders";
 
 @Injectable()
 export class KujiraService {

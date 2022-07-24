@@ -1,5 +1,5 @@
 
-class TradingOrders {
+export class TradingOrders {
 
   private readonly _fulfilledOrders: Order[];
 
