@@ -4,9 +4,9 @@ import { Injectable, Logger } from "@nestjs/common";
 import { HttpService } from "@nestjs/axios";
 import { Trading } from "../app/trading";
 import { TelegramService } from "nestjs-telegram";
-import data from "./data/contracts.json";
+import data from "../../contracts.json";
 import { KujiraClientService } from "./kujira-client-service";
-import { TradingState } from "../app/trading-state";
+import { TradingStateExecutor } from "../app/trading-state-executor";
 import { v4 as uuid } from "uuid";
 import { TradingBalance } from "../app/trading-balance";
 import { TradingOrders } from "../app/trading-orders";
@@ -49,7 +49,7 @@ export class KujiraService {
     const beforeState = trading.state;
     this.logger.log(`[start] ${beforeState}`)
     try {
-      await TradingState.next(trading, this, this.client);
+      await TradingStateExecutor.next(trading, this, this.client);
       trading.ongoing = false;
     } catch (e) {
       if (e instanceof Error) {

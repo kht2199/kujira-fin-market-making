@@ -38,7 +38,7 @@ export class TradingOrders {
     return this._fulfilledOrders.length;
   }
 
-  get lengthUnfilled(): number {
+  get lengthUnfulfilled(): number {
     return this._unfulfilledOrders.length;
   }
 
@@ -54,6 +54,7 @@ export class TradingOrders {
     return this.orders.map(o => o.idx);
   }
 
+  // noinspection JSUnusedGlobalSymbols
   get fulfilledOrders(): Order[] {
     return this._fulfilledOrders;
   }

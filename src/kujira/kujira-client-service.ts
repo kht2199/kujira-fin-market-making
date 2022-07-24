@@ -14,7 +14,7 @@ import { OrderResponse } from "kujira.js/src/fin";
 @Injectable()
 export class KujiraClientService {
 
-  private readonly _lcdUrl: string = 'https://lcd.kaiyo.kujira.setten.io';
+  private readonly _lcdUrl: string = process.env.ENDPOINT_LCD;
 
   private readonly _balanceUrl: string = `${this._lcdUrl}/cosmos/bank/v1beta1/balances`;
 
@@ -49,6 +49,7 @@ export class KujiraClientService {
     );
   }
 
+  // TODO market price caching.
   async getMarketPrice(wallet: Wallet, contract: Contract) {
     const orders = await this.books(wallet, contract, {
       limit: 1,

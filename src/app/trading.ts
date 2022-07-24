@@ -1,22 +1,12 @@
 import { v4 as uuid } from "uuid";
 import { TradingBalance } from "./trading-balance";
-
-export enum ClientState {
-  INITIALIZE = 'INITIALIZE',
-  ORDER = 'ORDER',
-  ORDER_PREPARED = 'ORDER_PREPARED',
-  FULFILLED_ORDERS = 'FULFILLED_ORDERS',
-  ORDER_EMPTY_SIDE_WITH_GAP = 'ORDER_EMPTY_SIDE_WITH_GAP',
-  CANCEL_ALL_ORDERS = 'CANCEL_ALL_ORDERS',
-  ORDER_CHECK = 'ORDER_CHECK',
-  WAITING_ALL_ORDER_COMPLETE = 'WAITING_ALL_ORDER_COMPLETE',
-}
+import { TradingState } from "./trading-state";
 
 export class Trading {
 
   readonly uuid: string;
 
-  private _state: ClientState = ClientState.INITIALIZE;
+  private _state: TradingState = TradingState.INITIALIZE;
 
   private _balance: TradingBalance;
 
@@ -36,11 +26,11 @@ export class Trading {
     this._targetRate = _targetRate;
   }
 
-  get state(): ClientState {
+  get state(): TradingState {
     return this._state;
   }
 
-  set state(value: ClientState) {
+  set state(value: TradingState) {
     this._state = value;
   }
 
