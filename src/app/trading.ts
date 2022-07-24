@@ -1,4 +1,5 @@
 import { v4 as uuid } from "uuid";
+import { TradingBalance } from "./trading-balance";
 
 export enum ClientState {
   INITIALIZE = 'INITIALIZE',
