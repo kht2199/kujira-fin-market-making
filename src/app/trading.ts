@@ -3,52 +3,58 @@
 import { Logger } from "@nestjs/common";
 import { KujiraService } from "../kujira.service";
 import { v4 as uuid } from "uuid";
-import { TelegramService } from "nestjs-telegram";
+import { asc, desc } from "../util/util";
+import { KujiraClientService } from "../client/kujira-client-service";
+
+enum ClientState {
+  INITIALIZE = 'INITIALIZE',
+  ORDER = 'ORDER',
+  ORDER_PREPARED = 'ORDER_PREPARED',
+  FULFILLED_ORDERS = 'FULFILLED_ORDERS',
+  ORDER_EMPTY_SIDE_WITH_GAP = 'ORDER_EMPTY_SIDE_WITH_GAP',
+  CANCEL_ALL_ORDERS = 'CANCEL_ALL_ORDERS',
+  ORDER_CHECK = 'ORDER_CHECK',
+  WAITING_ALL_ORDER_COMPLETE = 'WAITING_ALL_ORDER_COMPLETE',
+}
 
 export class Trading {
   private readonly logger = new Logger(Trading.name);
 
-  public _state: ClientState = ClientState.INITIALIZE;
+  readonly uuid: string;
+
+  private _state: ClientState = ClientState.INITIALIZE;
 
   private balance: TradingBalance;
-
-  private readonly baseSymbol: string;
-
-  private readonly quoteSymbol: string;
 
   public ongoing: boolean = false;
 
   private _targetRate: number | undefined;
 
-  private currentOrders: Order[];
-
-  private CHAT_ID: string = process.env.TELEGRAM_CHAT_ID;
+  private currentOrders: TradingOrders;
 
   private preparedOrders: OrderRequest[] = [];
 
   constructor(
-    private readonly telegram: TelegramService,
-    private readonly _service: KujiraService,
+    private readonly _service: KujiraClientService,
+    private readonly _kujira: KujiraService,
+    private readonly baseSymbol: string,
+    private readonly quoteSymbol: string,
     private _wallet: Wallet,
     private _contract: Contract,
     private _deltaRates: number[],
     _targetRate?: number,
   ) {
-    this.baseSymbol = this._service.toSymbol(this._contract.denoms.base)
-    this.quoteSymbol = this._service.toSymbol(this._contract.denoms.quote)
+    this.uuid = uuid().slice(0, 5);
     this._targetRate = _targetRate;
   }
 
   async next() {
     let message;
-    let fulfilledOrders: Order[];
-    let unfilledOrders: Order[];
     let marketPrice: number;
-
     switch (this._state) {
       case ClientState.INITIALIZE:
         marketPrice = await this.getMarketPrice();
-        await this.balances(marketPrice);
+        await this.fetchBalances(marketPrice);
         const balanceRate = this.balance.calculateRate(marketPrice);
         if (!this._targetRate) {
           this._targetRate = balanceRate;
@@ -57,7 +63,7 @@ export class Trading {
           throw new Error(`current rate[${balanceRate}] is greater than config rate[${this._deltaRates[0]}].`);
         }
         // 진행중인 주문이 있으면, ORDER_CHECK 로 변경한다.
-        this.currentOrders = await this.getOrders();
+        await this.fetchOrders();
         if (this.currentOrders.length === 1) {
           this._state = ClientState.CANCEL_ALL_ORDERS;
           return;
@@ -70,7 +76,7 @@ export class Trading {
       case ClientState.ORDER:
         // TODO market price caching.
         marketPrice = await this.getMarketPrice();
-        await this.balances(marketPrice)
+        await this.fetchBalances(marketPrice)
         const base = +this.balance.baseAmount;
         const quote = +this.balance.quoteAmount;
         this.logger.debug(`delta: ${this._deltaRates}, base: ${base}, quote: ${quote}, target: ${this._targetRate}`);
@@ -84,9 +90,9 @@ export class Trading {
         }
         // 주문수량의 주문정보{o}를 생성한다.
         const sellOrders = tps.filter(tp => tp.side === 'Sell')
-          .sort((n1, n2) => this.asc(n1.price, n2.price));
+          .sort((n1, n2) => asc(n1.price, n2.price));
         const buyOrders = tps.filter(tp => tp.side === 'Buy')
-          .sort((n1, n2) => this.desc(n1.price, n2.price));
+          .sort((n1, n2) => desc(n1.price, n2.price));
         this.preparedOrders = [
           ...this.toOrderRequests(this._contract, sellOrders),
           ...this.toOrderRequests(this._contract, buyOrders)
@@ -97,85 +103,74 @@ export class Trading {
         this.logger.log(`[orders] ${JSON.stringify(this.preparedOrders)}`);
         await this._service.orders(this._wallet, this.preparedOrders);
         message = this.preparedOrders
-          .sort((n1, n2) => this.desc(n1.price, n2.price))
+          .sort((n1, n2) => desc(n1.price, n2.price))
           .map(o => `${o.side} ${o.amount.toFixed(4)} ${o.side === 'Sell' ? this.baseSymbol : this.quoteSymbol} at ${o.price.toFixed(this._contract.price_precision.decimal_places)} ${this.quoteSymbol}`).join('\n');
-        this.sendMessage(`[orders] submit\n${message}`);
+        this._kujira.sendMessage(`[orders] submit\n${message}`);
         this._state = ClientState.ORDER_CHECK;
         this.preparedOrders = [];
         return;
       case ClientState.ORDER_CHECK:
-        this.currentOrders = await this.getOrders();
+        await this.fetchOrders();
         if (this.currentOrders.length === 0) {
           this._state = ClientState.ORDER;
           return;
         }
-        fulfilledOrders = this.currentOrders.filter(o => o.state === 'Closed');
-        unfilledOrders = this.currentOrders.filter(o => o.state !== 'Closed');
         // 진행중인 주문이 있는 경우, {n}개의 주문이 완료됨을 기다린다.
-        if (fulfilledOrders.length >= this.currentOrders.length / 2) {
+        if (this.currentOrders.lengthFulfilled >= this.currentOrders.length / 2) {
           this._state = ClientState.FULFILLED_ORDERS;
           return;
         }
-        let ordersForCheckSuspend = unfilledOrders.filter(o => o.side === 'Sell');
-        if (ordersForCheckSuspend.length === 0) {
-          ordersForCheckSuspend = unfilledOrders.filter(o => o.side === 'Buy');
-        }
-        if (ordersForCheckSuspend.length === unfilledOrders.length) {
+
+        if (this.currentOrders.isRemainsOneSide) {
           marketPrice = await this.getMarketPrice();
-          const gap = Math.min(...ordersForCheckSuspend.map(o => Math.abs(+o.quote_price - marketPrice)))
-          // e.g. market 100usd, gap 3usd => 3 / 100 => 3%
-          const percent = Math.abs(marketPrice - gap) / marketPrice;
+          const percent = this.currentOrders.calculateMinimumPriceGapPercentOfUnfilled(marketPrice);
           if (percent > 0.02) {
-            this.logger.warn(`[order state] market price: ${marketPrice} gap: ${gap} percent: ${percent}`);
+            this.logger.warn(`[order state] market price: ${marketPrice} percent: ${percent}`);
             this._state = ClientState.ORDER_EMPTY_SIDE_WITH_GAP;
             return;
           }
         }
-        const idxs = this.currentOrders.map(o => o.idx);
-        this.logger.log(`[order state] idxs: ${idxs.join(',')} fulfilled orders: ${fulfilledOrders.length}`)
+        this.logger.log(`[order state] idxs: ${this.currentOrders.orderIds.join(',')} fulfilled: ${this.currentOrders.lengthFulfilled}`)
         return;
       case ClientState.ORDER_EMPTY_SIDE_WITH_GAP:
       case ClientState.FULFILLED_ORDERS:
       case ClientState.CANCEL_ALL_ORDERS:
-        this.currentOrders = await this.getOrders();
-        fulfilledOrders = this.currentOrders.filter(o => o.state === 'Closed');
-        unfilledOrders = this.currentOrders.filter(o => o.state !== 'Closed');
-        if (fulfilledOrders.length > 0) {
-          message = `[orders] withdraw: ${JSON.stringify(fulfilledOrders.map(o => o.idx).join(','))}`;
+        await this.fetchOrders();
+        if (this.currentOrders.lengthFilled > 0) {
+          const filledOrder: Order[] = this.currentOrders.filledOrders;
+          message = `[orders] withdraw: ${filledOrder.map(o => o.idx).join(',')}`;
           this.logger.log(message);
-          await this._service.ordersWithdraw(this._wallet, this._contract, fulfilledOrders);
-          this.sendMessage(message);
+          await this._service.ordersWithdraw(this._wallet, this._contract, filledOrder);
+          this._kujira.sendMessage(message);
         }
-        if (unfilledOrders.length > 0) {
-          message = `[orders] cancel: ${JSON.stringify(unfilledOrders.map(o => o.idx).join(','))}`;
+        if (this.currentOrders.lengthUnfilled > 0) {
+          const unfulfilledOrders: Order[] = this.currentOrders.unfulfilledOrders;
+          message = `[orders] cancel: ${unfulfilledOrders.map(o => o.idx).join(',')}`;
           this.logger.log(message);
-          await this._service.ordersCancel(this._wallet, this._contract, unfilledOrders);
-          this.sendMessage(message);
+          await this._service.ordersCancel(this._wallet, this._contract, unfulfilledOrders);
+          this._kujira.sendMessage(message);
         }
         this._state = ClientState.ORDER;
         return;
-      case ClientState.MARKET_ORDER_CHECK:
-        // 즉시 거래가능한 지정가 거래이므로, 주문을 모두 회수하고 ORDER 로 상태 변경한다.
-        return;
       case ClientState.WAITING_ALL_ORDER_COMPLETE:
-        this.currentOrders = await this.getOrders();
-        if (this.currentOrders.length === 0) {
+        await this.fetchOrders()
+        if (this.currentOrders.isEmpty) {
           this._state = ClientState.ORDER;
           return;
         }
-        if (this.currentOrders.filter(o => o.state !== 'Closed').length === 0) {
+        if (this.currentOrders.isAllClosedOrdersEmpty) {
           this._state = ClientState.FULFILLED_ORDERS;
         }
         return;
     }
   }
 
-  async getOrders() {
-    return this._service.getOrders(this._wallet, this._contract)
+  async fetchOrders(): Promise<void> {
+    this.currentOrders = new TradingOrders(await this._service.getOrders(this._wallet, this._contract))
   }
 
-  async balances(marketPrice: number) {
-    const balances = await this._service.fetchBalances(
+  async fetchBalances(marketPrice: number) {
+    const balances = await this._service.getBalances(
       this._wallet,
       this._contract,
     );
@@ -244,43 +239,8 @@ export class Trading {
     return { price, base, dq, normal, side: dq > 0 ? 'Buy' : 'Sell'};
   }
 
-  desc(n1: number, n2: number): number {
-    return n1 < n2 ? 1 : -1
-  }
-
-  asc(n1: number, n2: number): number {
-    return this.desc(n1, n2) > 1 ? -1 : 1;
-  }
-
-  public printStart() {
-    this.logger.log(`[start] ${this._state}`)
+  get state(): ClientState {
     return this._state;
   }
 
-  public printEnd(beforeState: ClientState) {
-    if (beforeState !== this._state) {
-      this.logger.log(`[end] ${beforeState} => ${this._state}`)
-    } else {
-      this.logger.log(`[end] ${this._state}`)
-    }
-  }
-
-  sendMessage(message: string): void {
-    if (!this.CHAT_ID) {
-      return;
-    }
-    this.telegram.sendMessage({ chat_id: this.CHAT_ID, text: message }).subscribe()
-  }
-}
-
-enum ClientState {
-  INITIALIZE = 'INITIALIZE',
-  ORDER = 'ORDER',
-  ORDER_PREPARED = 'ORDER_PREPARED',
-  FULFILLED_ORDERS = 'FULFILLED_ORDERS',
-  ORDER_EMPTY_SIDE_WITH_GAP = 'ORDER_EMPTY_SIDE_WITH_GAP',
-  CANCEL_ALL_ORDERS = 'CANCEL_ALL_ORDERS',
-  ORDER_CHECK = 'ORDER_CHECK',
-  MARKET_ORDER_CHECK = 'MARKET_ORDER_CHECK',
-  WAITING_ALL_ORDER_COMPLETE = 'WAITING_ALL_ORDER_COMPLETE',
 }
