@@ -54,6 +54,7 @@ export class TradingState {
           .sort((n1, n2) => asc(n1.price, n2.price));
         const buyOrders = tps.filter(tp => tp.side === 'Buy')
           .sort((n1, n2) => desc(n1.price, n2.price));
+        trading.preparedOrders = [];
         trading.addPreparedOrders(kujira.toOrderRequests(contract, sellOrders));
         trading.addPreparedOrders(kujira.toOrderRequests(contract, buyOrders));
         trading.state = ClientState.ORDER_PREPARED;
