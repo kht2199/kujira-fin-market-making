@@ -48,6 +48,7 @@ export class Trading {
     let fulfilledOrders: Order[];
     let unfilledOrders: Order[];
     let marketPrice: number;
+
     switch (this._state) {
       case ClientState.INITIALIZE:
         marketPrice = await this.getMarketPrice();
@@ -73,35 +74,23 @@ export class Trading {
         // TODO market price caching.
         marketPrice = await this.getMarketPrice();
         await this.balances(marketPrice)
-        this.logger.debug(`balance rate at current is ${this.balanceBase * marketPrice / (this.balanceBase * marketPrice + this.balanceQuote)}`)
+        this.logger.debug(`delta: ${this._deltaRates}, base: ${this.balanceBase}, quote: ${this.balanceQuote}, target: ${this._targetRate}`);
         let tps: OrderMarketMaking[] = this._deltaRates
           .map(r => [r, -r]).flat()
-          .map(r => {
-            // 자산비율이 주문비율{1%,2%}에 해당하는 목표가격을 {tp1, tp2} 찾는다.
-            const price = marketPrice + marketPrice * r;
-            // 주문비율의 가격에서 변동자산가치를{tot1, tot2} 계산한다.
-            const tot = this.balanceBase * price + this.balanceQuote;
-            // 변동자산가치에서 목표비율을 곱해 목표가의 갯수를{base}를 계산한다.
-            const base = tot * this._targetRate / price;
-            // 목표수량과 현재 수량만큼의 차이인 주문수량{dq1, dq2} 계산한다.
-            const dq = base - this.balanceBase;
-            // 부호가 다르면, 가격 이격이 발생.
-            const normal = r * dq < 0;
-            return { price, tot, base, dq, normal};
-          });
+          .map(r => Trading.toOrderMarketMaking(r, marketPrice, this.balanceBase, this.balanceQuote, this._targetRate));
         const notNormal = tps.filter(tp => !tp.normal);
         if (notNormal.length > 0) {
           this.logger.warn(`[price] found gap between market price{${marketPrice}} and order price{${notNormal[0].price}}`)
           this.logger.warn(`[orders] prepared: ${JSON.stringify(tps)}`)
         }
         // 주문수량의 주문정보{o}를 생성한다.
-        const sellOrders = tps.filter(tp => tp.dq < 0)
+        const sellOrders = tps.filter(tp => tp.side === 'Sell')
           .sort((n1, n2) => this.asc(n1.price, n2.price));
-        const buyOrders = tps.filter(tp => tp.dq > 0)
+        const buyOrders = tps.filter(tp => tp.side === 'Buy')
           .sort((n1, n2) => this.desc(n1.price, n2.price));
         this.preparedOrders = [
-          ...this.toOrderRequests(this._contract, sellOrders, 'Sell'),
-          ...this.toOrderRequests(this._contract, buyOrders, 'Buy')
+          ...this.toOrderRequests(this._contract, sellOrders),
+          ...this.toOrderRequests(this._contract, buyOrders)
         ];
         this._state = ClientState.ORDER_PREPARED;
         return this.next();
@@ -233,7 +222,7 @@ export class Trading {
     return marketPrice;
   }
 
-  toOrderRequests(contract: Contract, orders: OrderMarketMaking[], side: OrderSide): OrderRequest[] {
+  toOrderRequests(contract: Contract, orders: OrderMarketMaking[]): OrderRequest[] {
     let prevQuantities = 0;
     return orders
       .map(o => {
@@ -246,15 +235,29 @@ export class Trading {
         return o2;
       })
       .map(o => {
-        const amount = Math.abs(side === 'Sell' ? o.dq : (o.dq * o.price));
+        const amount = Math.abs(o.side === 'Sell' ? o.dq : (o.dq * o.price));
         return {
           uuid: uuid(),
           contract,
-          side,
+          side: o.side,
           price: o.price,
           amount,
         }
       });
+  }
+
+  public static toOrderMarketMaking(rate: number, marketPrice: number, baseQuantity: number, quoteQuantity: number, targetRate: number): OrderMarketMaking {
+    // 자산비율이 주문비율{1%,2%}에 해당하는 목표가격을 {tp1, tp2} 찾는다.
+    const price = marketPrice + marketPrice * rate;
+    // 주문비율의 가격에서 변동자산가치를{tot1, tot2} 계산한다.
+    const tot = baseQuantity * price + quoteQuantity;
+    // 변동자산가치에서 목표비율을 곱해 목표가의 갯수를{base}를 계산한다.
+    const base = tot * targetRate / price;
+    // 목표수량과 현재 수량만큼의 차이인 주문수량{dq1, dq2} 계산한다.
+    const dq = base - baseQuantity;
+    // 부호가 다르면, 가격 이격이 발생.
+    const normal = rate * dq < 0;
+    return { price, base, dq, normal, side: dq > 0 ? 'Buy' : 'Sell'};
   }
 
   desc(n1: number, n2: number): number {

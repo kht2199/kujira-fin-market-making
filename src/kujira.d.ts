@@ -61,17 +61,11 @@ declare global {
     amount: number;
   }
 
-  interface OrderRequestSimulation {
-    side: OrderSide;
-    price: number;
-    amount: number;
-  }
-
   interface OrderMarketMaking {
     price: number;
-    tot: number;
     base: number;
     dq: number;
+    side: OrderSide;
     normal: boolean;
   }
 }
