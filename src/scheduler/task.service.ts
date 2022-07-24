@@ -29,20 +29,9 @@ export class TasksService {
       .then(async wallet => {
         let targetRate = process.env.TARGET_RATE ? Number(process.env.TARGET_RATE) : undefined;
         if (!targetRate) {
-          const balances = await this.clientService.getBalances(wallet, contract);
-          const base = balances.filter((b) => b.denom === contract.denoms.base)[0];
-          const quote = balances.filter((b) => b.denom === contract.denoms.quote)[0];
-          if (!base) {
-            const message = `invalid base balance: ${contract.denoms.base}`;
-            throw new Error(message);
-          }
-          if (!quote) {
-            const message = `invalid quote balance: ${contract.denoms.quote}`;
-            throw new Error(message);
-          }
-          const balance = new TradingBalance(base, quote, baseSymbol, quoteSymbol);
+          const balances = await this.kujiraService.fetchBalances(wallet, contract);
           const marketPrice = await clientService.getMarketPrice(wallet, contract);
-          targetRate = balance.calculateRate(marketPrice);
+          targetRate = balances.calculateRate(marketPrice);
         }
         return new Trading(
           baseSymbol, quoteSymbol,

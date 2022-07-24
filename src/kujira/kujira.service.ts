@@ -106,11 +106,12 @@ export class KujiraService {
     return contract;
   }
 
-  async fetchBalances(trading: Trading) {
-    const { wallet, baseSymbol, quoteSymbol, contract } = trading;
+  async fetchBalances(wallet: Wallet, contract: Contract): Promise<TradingBalance> {
     const balances = await this.client.getBalances(wallet, contract);
     const base = balances.filter((b) => b.denom === contract.denoms.base)[0];
     const quote = balances.filter((b) => b.denom === contract.denoms.quote)[0];
+    const baseSymbol = this.toSymbol(base.denom);
+    const quoteSymbol = this.toSymbol(quote.denom);
     if (!base) {
       const message = `invalid base balance: ${contract.denoms.base}`;
       throw new Error(message);

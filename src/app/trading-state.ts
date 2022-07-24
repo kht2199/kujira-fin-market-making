@@ -16,7 +16,7 @@ export class TradingState {
     switch (state) {
       case ClientState.INITIALIZE:
         marketPrice = await client.getMarketPrice(wallet, contract);
-        trading.balance = await kujira.fetchBalances(trading);
+        trading.balance = await kujira.fetchBalances(wallet, contract);
         const balanceRate = trading.balance.calculateRate(marketPrice);
         if (!targetRate) {
           targetRate = trading.targetRate = balanceRate;
@@ -38,7 +38,7 @@ export class TradingState {
       case ClientState.ORDER:
         // TODO market price caching.
         marketPrice = await client.getMarketPrice(wallet, contract);
-        trading.balance = await kujira.fetchBalances(trading);
+        trading.balance = await kujira.fetchBalances(wallet, contract);
         const { baseAmount, quoteAmount } = trading.balance;
         TradingState.logger.debug(`delta: ${deltaRates}, base: ${baseAmount}, quote: ${quoteAmount}, target: ${targetRate}`);
         let tps: OrderMarketMaking[] = deltaRates
