@@ -86,8 +86,4 @@ export class Trading {
   set preparedOrders(value: OrderRequest[]) {
     this._preparedOrders = value;
   }
-
-  addPreparedOrders(items: OrderRequest[]) {
-    this._preparedOrders.push(...items)
-  }
 }
