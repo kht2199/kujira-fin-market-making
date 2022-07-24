@@ -15,7 +15,6 @@ export class TasksService {
     private clientService: KujiraClientService,
   ) {
 
-    const targetRate = process.env.TARGET_RATE ? Number(process.env.TARGET_RATE) : undefined;
     const interval = process.env.INTERVAL || 5000;
     const rates: number[] = process.env.RATES.split(',')
       .map(s => s.trim())
@@ -27,12 +26,29 @@ export class TasksService {
     const baseSymbol = kujiraService.toSymbol(contract.denoms.base)
     const quoteSymbol = kujiraService.toSymbol(contract.denoms.quote)
     kujiraService.connect(endpoint, mnemonic)
-      .then(wallet => new Trading(
-        clientService,
-        kujiraService,
-        baseSymbol, quoteSymbol,
-        wallet, contract, rates, targetRate
-      ))
+      .then(async wallet => {
+        let targetRate = process.env.TARGET_RATE ? Number(process.env.TARGET_RATE) : undefined;
+        if (!targetRate) {
+          const balances = await this.clientService.getBalances(wallet, contract);
+          const base = balances.filter((b) => b.denom === contract.denoms.base)[0];
+          const quote = balances.filter((b) => b.denom === contract.denoms.quote)[0];
+          if (!base) {
+            const message = `invalid base balance: ${contract.denoms.base}`;
+            throw new Error(message);
+          }
+          if (!quote) {
+            const message = `invalid quote balance: ${contract.denoms.quote}`;
+            throw new Error(message);
+          }
+          const balance = new TradingBalance(base, quote, baseSymbol, quoteSymbol);
+          const marketPrice = await clientService.getMarketPrice(wallet, contract);
+          targetRate = balance.calculateRate(marketPrice);
+        }
+        return new Trading(
+          baseSymbol, quoteSymbol,
+          wallet, contract, rates, targetRate
+        );
+      })
       .then((trading) => kujiraService.addTrading(trading));
     this.addNewInterval(
       'Market Making',

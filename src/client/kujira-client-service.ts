@@ -10,6 +10,7 @@ import { BookResponse } from "kujira.js/lib/cjs/fin";
 import { HttpService } from "@nestjs/axios";
 import { Injectable } from "@nestjs/common";
 import { OrderResponse } from "kujira.js/src/fin";
+import { Trading } from "../app/trading";
 
 @Injectable()
 export class KujiraClientService {
@@ -47,6 +48,17 @@ export class KujiraClientService {
           ),
         ),
     );
+  }
+
+  async getMarketPrice(wallet: Wallet, contract: Contract) {
+    const orders = await this.books(wallet, contract, {
+      limit: 1,
+    });
+    if (orders.base.length !== 1) throw new Error('orders.base.length !== 1');
+    if (orders.quote.length !== 1) throw new Error('orders.quote.length !== 1');
+    const base = Number(orders.base[0].quote_price);
+    const quote = Number(orders.quote[0].quote_price);
+    return (base + quote) / 2;
   }
 
   async books(

@@ -6,6 +6,8 @@ import { Trading } from "./app/trading";
 import { TelegramService } from "nestjs-telegram";
 import data from "./data/contracts.json";
 import { KujiraClientService } from "./client/kujira-client-service";
+import { TradingState } from "./app/trading-state";
+import { v4 as uuid } from "uuid";
 
 @Injectable()
 export class KujiraService {
@@ -45,7 +47,7 @@ export class KujiraService {
     const beforeState = trading.state;
     this.logger.log(`[start] ${beforeState}`)
     try {
-      await trading.next();
+      await TradingState.next(trading, this, this.client);
       trading.ongoing = false;
     } catch (e) {
       if (e instanceof Error) {
@@ -102,5 +104,64 @@ export class KujiraService {
       throw new Error('Contract not exists.')
     }
     return contract;
+  }
+
+  async fetchBalances(trading: Trading) {
+    const { wallet, baseSymbol, quoteSymbol, contract } = trading;
+    const balances = await this.client.getBalances(wallet, contract);
+    const base = balances.filter((b) => b.denom === contract.denoms.base)[0];
+    const quote = balances.filter((b) => b.denom === contract.denoms.quote)[0];
+    if (!base) {
+      const message = `invalid base balance: ${contract.denoms.base}`;
+      throw new Error(message);
+    }
+    if (!quote) {
+      const message = `invalid quote balance: ${contract.denoms.quote}`;
+      throw new Error(message);
+    }
+    return new TradingBalance(base, quote, baseSymbol, quoteSymbol);
+  }
+
+  async fetchOrders(trading: Trading): Promise<TradingOrders> {
+    const { wallet, contract } = trading;
+    return new TradingOrders(await this.client.getOrders(wallet, contract))
+  }
+
+  public toOrderMarketMaking(rate: number, marketPrice: number, baseQuantity: number, quoteQuantity: number, targetRate: number): OrderMarketMaking {
+    // 자산비율이 주문비율{1%,2%}에 해당하는 목표가격을 {tp1, tp2} 찾는다.
+    const price = marketPrice + marketPrice * rate;
+    // 주문비율의 가격에서 변동자산가치를{tot1, tot2} 계산한다.
+    const tot = baseQuantity * price + quoteQuantity;
+    // 변동자산가치에서 목표비율을 곱해 목표가의 갯수를{base}를 계산한다.
+    const base = tot * targetRate / price;
+    // 목표수량과 현재 수량만큼의 차이인 주문수량{dq1, dq2} 계산한다.
+    const dq = base - baseQuantity;
+    // 부호가 다르면, 가격 이격이 발생.
+    const normal = rate * dq < 0;
+    return { price, base, dq, normal, side: dq > 0 ? 'Buy' : 'Sell'};
+  }
+
+  public toOrderRequests(contract: Contract, orders: OrderMarketMaking[]): OrderRequest[] {
+    let prevQuantities = 0;
+    return orders
+      .map(o => {
+        const quantity = Math.abs(o.dq) - prevQuantities;
+        const o2 = {
+          ...o,
+          dq: quantity
+        };
+        prevQuantities += quantity;
+        return o2;
+      })
+      .map(o => {
+        const amount = Math.abs(o.side === 'Sell' ? o.dq : (o.dq * o.price));
+        return {
+          uuid: uuid(),
+          contract,
+          side: o.side,
+          price: o.price,
+          amount,
+        }
+      });
   }
 }
