@@ -7,6 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 import { HttpModule } from '@nestjs/axios';
 import { KujiraService } from './kujira.service';
 import { TelegramModule } from "nestjs-telegram";
+import { KujiraClientService } from "./client/kujira-client-service";
 
 @Module({
   imports: [
@@ -20,6 +21,6 @@ import { TelegramModule } from "nestjs-telegram";
     }),
   ],
   controllers: [AppController],
-  providers: [AppService, TasksService, KujiraService],
+  providers: [AppService, TasksService, KujiraService, KujiraClientService],
 })
 export class AppModule {}
