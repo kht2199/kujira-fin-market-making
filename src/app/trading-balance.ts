@@ -1,5 +1,5 @@
 
-class TradingBalance {
+export class TradingBalance {
 
   private readonly _baseAmount: number;
 
