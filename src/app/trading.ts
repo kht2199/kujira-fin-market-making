@@ -103,10 +103,6 @@ export class Trading {
           ...this.toOrderRequests(this._contract, sellOrders, 'Sell'),
           ...this.toOrderRequests(this._contract, buyOrders, 'Buy')
         ];
-        // TODO 주문정보{o} 시장가로 거래 가능한지 판단한다.
-        // TODO 시장가로 거래가 가능할 경우: 주문 후 MARKET_ORDER_CHECK 로 변경
-        // 시장가로 거래가 가능하지 않을 경우:
-        // 주문정보{o} 실행한다.
         this._state = ClientState.ORDER_PREPARED;
         return this.next();
       case ClientState.ORDER_PREPARED:
@@ -115,7 +111,7 @@ export class Trading {
         message = this.preparedOrders
           .sort((n1, n2) => this.desc(n1.price, n2.price))
           .map(o => `${o.side} ${o.amount.toFixed(4)} ${o.side === 'Sell' ? this.baseSymbol : this.quoteSymbol} at ${o.price.toFixed(this._contract.price_precision.decimal_places)} ${this.quoteSymbol}`).join('\n');
-        this.sendMessage(`Orders\n${message}`);
+        this.sendMessage(`[orders] submit\n${message}`);
         this._state = ClientState.ORDER_CHECK;
         this.preparedOrders = [];
         return;
