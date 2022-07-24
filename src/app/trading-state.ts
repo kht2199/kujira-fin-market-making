@@ -1,7 +1,7 @@
 import { ClientState, Trading } from "./trading";
 import { asc, desc } from "../util/util";
-import { KujiraService } from "../kujira.service";
-import { KujiraClientService } from "../client/kujira-client-service";
+import { KujiraService } from "../kujira/kujira.service";
+import { KujiraClientService } from "../kujira/kujira-client-service";
 import { Logger } from "@nestjs/common";
 
 export class TradingState {

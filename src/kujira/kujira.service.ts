@@ -2,11 +2,11 @@
 
 import { Injectable, Logger } from "@nestjs/common";
 import { HttpService } from "@nestjs/axios";
-import { Trading } from "./app/trading";
+import { Trading } from "../app/trading";
 import { TelegramService } from "nestjs-telegram";
 import data from "./data/contracts.json";
-import { KujiraClientService } from "./client/kujira-client-service";
-import { TradingState } from "./app/trading-state";
+import { KujiraClientService } from "./kujira-client-service";
+import { TradingState } from "../app/trading-state";
 import { v4 as uuid } from "uuid";
 
 @Injectable()

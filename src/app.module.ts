@@ -5,9 +5,9 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { TasksService } from './scheduler/task.service';
 import { ConfigModule } from '@nestjs/config';
 import { HttpModule } from '@nestjs/axios';
-import { KujiraService } from './kujira.service';
+import { KujiraService } from './kujira/kujira.service';
 import { TelegramModule } from "nestjs-telegram";
-import { KujiraClientService } from "./client/kujira-client-service";
+import { KujiraClientService } from "./kujira/kujira-client-service";
 
 @Module({
   imports: [

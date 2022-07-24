@@ -1,1 +1,1 @@
-/// <reference path="src/kujira.d.ts" />
+/// <reference path="src/kujira/kujira.d.ts" />

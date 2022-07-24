@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { SchedulerRegistry } from "@nestjs/schedule";
-import { KujiraService } from "../kujira.service";
+import { KujiraService } from "../kujira/kujira.service";
 import { Trading } from "../app/trading";
 import { TelegramService } from "nestjs-telegram";
-import { KujiraClientService } from "../client/kujira-client-service";
+import { KujiraClientService } from "../kujira/kujira-client-service";
 
 @Injectable()
 export class TasksService {

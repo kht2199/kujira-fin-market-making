@@ -10,14 +10,13 @@ import { BookResponse } from "kujira.js/lib/cjs/fin";
 import { HttpService } from "@nestjs/axios";
 import { Injectable } from "@nestjs/common";
 import { OrderResponse } from "kujira.js/src/fin";
-import { Trading } from "../app/trading";
 
 @Injectable()
 export class KujiraClientService {
 
-  private _lcdUrl: string = 'https://lcd.kaiyo.kujira.setten.io';
+  private readonly _lcdUrl: string = 'https://lcd.kaiyo.kujira.setten.io';
 
-  private _balanceUrl: string = `${this._lcdUrl}/cosmos/bank/v1beta1/balances`;
+  private readonly _balanceUrl: string = `${this._lcdUrl}/cosmos/bank/v1beta1/balances`;
 
   constructor(
     private readonly httpService: HttpService,
