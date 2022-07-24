@@ -15,7 +15,7 @@ export class KujiraService {
   // noinspection JSUnusedLocalSymbols
   private readonly logger = new Logger(KujiraService.name);
 
-  private tradings: Trading[];
+  private tradings: Trading[] = [];
 
   private contracts: Contract[] = data as Contract[];
 
