@@ -133,9 +133,25 @@ export class Trading {
           this._state = ClientState.FULFILLED_ORDERS;
           return;
         }
+        let ordersForCheckSuspend = this.currentOrders.filter(o => o.side === 'Sell');
+        if (ordersForCheckSuspend.length === 0) {
+          ordersForCheckSuspend = this.currentOrders.filter(o => o.side === 'Buy');
+        }
+        if (ordersForCheckSuspend.length === this.currentOrders.length) {
+          marketPrice = await this.getMarketPrice();
+          const gap = Math.min(...ordersForCheckSuspend.map(o => Math.abs(+o.quote_price - marketPrice)))
+          // e.g. market 100usd, gap 3usd => 3 / 100 => 3%
+          const percent = Math.abs(marketPrice - gap) / marketPrice;
+          if (percent > 0.02) {
+            this.logger.warn(`[order state] market price: ${marketPrice} gap: ${gap} percent: ${percent}`);
+            this._state = ClientState.ORDER_EMPTY_SIDE_WITH_GAP;
+            return;
+          }
+        }
         const idxs = this.currentOrders.map(o => o.idx);
         this.logger.log(`[order state] idxs: ${idxs.join(',')} fulfilled orders: ${fulfilledOrders.length}`)
         return;
+      case ClientState.ORDER_EMPTY_SIDE_WITH_GAP:
       case ClientState.FULFILLED_ORDERS:
       case ClientState.CANCEL_ALL_ORDERS:
         this.currentOrders = await this.getOrders();
@@ -288,6 +304,7 @@ enum ClientState {
   ORDER = 'ORDER',
   ORDER_PREPARED = 'ORDER_PREPARED',
   FULFILLED_ORDERS = 'FULFILLED_ORDERS',
+  ORDER_EMPTY_SIDE_WITH_GAP = 'ORDER_EMPTY_SIDE_WITH_GAP',
   CANCEL_ALL_ORDERS = 'CANCEL_ALL_ORDERS',
   ORDER_CHECK = 'ORDER_CHECK',
   MARKET_ORDER_CHECK = 'MARKET_ORDER_CHECK',
