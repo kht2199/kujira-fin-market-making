@@ -52,6 +52,9 @@ export class Trading {
       case ClientState.INITIALIZE:
         marketPrice = await this.getMarketPrice();
         await this.balances(marketPrice);
+        if (!this._targetRate) {
+          this._targetRate = this._balanceRate;
+        }
         if (Math.abs(this._balanceRate - this._targetRate) >= this._deltaRates[0]) {
           throw new Error(`current rate[${this._balanceRate}] is greater than config rate[${this._deltaRates[0]}].`);
         }
@@ -208,9 +211,6 @@ export class Trading {
     this._balanceRate = rate;
     this.balanceBase = bAmount;
     this.balanceQuote = qAmount;
-    if (!this._targetRate) {
-      this._targetRate = this._balanceRate;
-    }
     this.logger.log(`[balances] base/quote: ${bAmount}${this.baseSymbol}/${qAmount}${this.quoteSymbol}, balanceTotal: ${totalValue}${this.quoteSymbol}, balanceRate: ${rate}, targetRate: ${this._targetRate}`);
   }
 
