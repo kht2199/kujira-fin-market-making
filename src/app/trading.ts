@@ -76,17 +76,12 @@ export class Trading {
           .map(r => {
             // 자산비율이 주문비율{1%,2%}에 해당하는 목표가격을 {tp1, tp2} 찾는다.
             const price = marketPrice + marketPrice * r;
-            this.logger.debug(`balance target rate is ${this._targetRate}`)
-            this.logger.debug(`balance rate at target is ${this.balanceBase * price / (this.balanceBase * price + this.balanceQuote)}`)
             // 주문비율의 가격에서 변동자산가치를{tot1, tot2} 계산한다.
-            const curTot = this.balanceBase * marketPrice + this.balanceQuote;
             const tot = this.balanceBase * price + this.balanceQuote;
-            this.logger.debug(`value will change from ${curTot}(${marketPrice}) to ${tot}(${price})`)
             // 변동자산가치에서 목표비율을 곱해 목표가의 갯수를{base}를 계산한다.
             const base = tot * this._targetRate / price;
             // 목표수량과 현재 수량만큼의 차이인 주문수량{dq1, dq2} 계산한다.
             const dq = base - this.balanceBase;
-            this.logger.debug(`quantity will change from ${this.balanceBase} to ${base}, delta is ${dq}`)
             // 부호가 다르면, 가격 이격이 발생.
             const normal = r * dq < 0;
             return { price, tot, base, dq, normal};
@@ -94,6 +89,7 @@ export class Trading {
         const notNormal = tps.filter(tp => !tp.normal);
         if (notNormal.length > 0) {
           this.logger.warn(`[price] found gap between market price{${marketPrice}} and order price{${notNormal[0].price}}`)
+          this.logger.warn(`[orders] prepared: ${JSON.stringify(tps)}`)
         }
         // 주문수량의 주문정보{o}를 생성한다.
         const sellOrders = tps.filter(tp => tp.dq < 0)
