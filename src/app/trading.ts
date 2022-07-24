@@ -133,11 +133,11 @@ export class Trading {
           this._state = ClientState.FULFILLED_ORDERS;
           return;
         }
-        let ordersForCheckSuspend = this.currentOrders.filter(o => o.side === 'Sell');
+        let ordersForCheckSuspend = unfilledOrders.filter(o => o.side === 'Sell');
         if (ordersForCheckSuspend.length === 0) {
-          ordersForCheckSuspend = this.currentOrders.filter(o => o.side === 'Buy');
+          ordersForCheckSuspend = unfilledOrders.filter(o => o.side === 'Buy');
         }
-        if (ordersForCheckSuspend.length === this.currentOrders.length) {
+        if (ordersForCheckSuspend.length === unfilledOrders.length) {
           marketPrice = await this.getMarketPrice();
           const gap = Math.min(...ordersForCheckSuspend.map(o => Math.abs(+o.quote_price - marketPrice)))
           // e.g. market 100usd, gap 3usd => 3 / 100 => 3%
