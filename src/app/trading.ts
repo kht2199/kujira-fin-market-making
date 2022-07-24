@@ -10,11 +10,7 @@ export class Trading {
 
   public _state: ClientState = ClientState.INITIALIZE;
 
-  private balanceBase: number;
-
-  private balanceQuote: number;
-
-  private _balanceRate: number;
+  private balance: TradingBalance;
 
   private readonly baseSymbol: string;
 
@@ -53,11 +49,12 @@ export class Trading {
       case ClientState.INITIALIZE:
         marketPrice = await this.getMarketPrice();
         await this.balances(marketPrice);
+        const balanceRate = this.balance.calculateRate(marketPrice);
         if (!this._targetRate) {
-          this._targetRate = this._balanceRate;
+          this._targetRate = balanceRate;
         }
-        if (Math.abs(this._balanceRate - this._targetRate) >= this._deltaRates[0]) {
-          throw new Error(`current rate[${this._balanceRate}] is greater than config rate[${this._deltaRates[0]}].`);
+        if (Math.abs(balanceRate - this._targetRate) >= this._deltaRates[0]) {
+          throw new Error(`current rate[${balanceRate}] is greater than config rate[${this._deltaRates[0]}].`);
         }
         // 진행중인 주문이 있으면, ORDER_CHECK 로 변경한다.
         this.currentOrders = await this.getOrders();
@@ -74,10 +71,12 @@ export class Trading {
         // TODO market price caching.
         marketPrice = await this.getMarketPrice();
         await this.balances(marketPrice)
-        this.logger.debug(`delta: ${this._deltaRates}, base: ${this.balanceBase}, quote: ${this.balanceQuote}, target: ${this._targetRate}`);
+        const base = +this.balance.baseAmount;
+        const quote = +this.balance.quoteAmount;
+        this.logger.debug(`delta: ${this._deltaRates}, base: ${base}, quote: ${quote}, target: ${this._targetRate}`);
         let tps: OrderMarketMaking[] = this._deltaRates
           .map(r => [r, -r]).flat()
-          .map(r => Trading.toOrderMarketMaking(r, marketPrice, this.balanceBase, this.balanceQuote, this._targetRate));
+          .map(r => Trading.toOrderMarketMaking(r, marketPrice, base, quote, this._targetRate));
         const notNormal = tps.filter(tp => !tp.normal);
         if (notNormal.length > 0) {
           this.logger.warn(`[price] found gap between market price{${marketPrice}} and order price{${notNormal[0].price}}`)
@@ -190,23 +189,8 @@ export class Trading {
       const message = `invalid quote balance: ${this._contract.denoms.quote}`;
       throw new Error(message);
     }
-    const bAmount = Number(base.amount);
-    const qAmount = Number(quote.amount);
-    const {rate, totalValue} = this.getBalanceStat(bAmount, qAmount, marketPrice);
-    this._balanceRate = rate;
-    this.balanceBase = bAmount;
-    this.balanceQuote = qAmount;
-    this.logger.log(`[balances] base/quote: ${bAmount}${this.baseSymbol}/${qAmount}${this.quoteSymbol}, balanceTotal: ${totalValue}${this.quoteSymbol}, balanceRate: ${rate}, targetRate: ${this._targetRate}`);
-  }
-
-  getBalanceStat(base: number, quote: number, price: number) {
-    const baseValue = base * price;
-    const totalValue = baseValue + quote;
-    return {
-      base, quote, price,
-      baseValue, totalValue,
-      rate: baseValue / totalValue
-    }
+    this.balance = new TradingBalance(base, quote, this.baseSymbol, this.quoteSymbol);
+    this.logger.log(`[balances] base/quote: ${this.balance.baseAmount}${this.baseSymbol}/${this.balance.quoteAmount}${this.quoteSymbol}, balanceRate: ${this.balance.calculateRate(marketPrice)}, targetRate: ${this._targetRate}`);
   }
 
   async getMarketPrice() {
@@ -279,11 +263,6 @@ export class Trading {
     } else {
       this.logger.log(`[end] ${this._state}`)
     }
-  }
-
-  async reconnect() {
-    this.logger.log('[wallet] reconnect...');
-    this._wallet = await this._service.reconnect(this._wallet)
   }
 
   sendMessage(message: string): void {
