@@ -19,6 +19,11 @@ export class TradingBalance {
     return baseValue / totalValue;
   }
 
+  public calculateValue(marketPrice: number): number {
+    const baseValue = this._baseAmount * marketPrice;
+    return baseValue + this._quoteAmount;
+  }
+
   get baseSymbol(): string {
     return this._baseSymbol;
   }
