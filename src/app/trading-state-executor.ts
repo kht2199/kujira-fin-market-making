@@ -49,6 +49,7 @@ export class TradingStateExecutor {
           return;
         } else if (currentOrders.length > 1) {
           trading.state = TradingState.ORDER_CHECK;
+          trading.fulfilledOrders = currentOrders.fulfilledOrders;
           return;
         }
         trading.state = TradingState.ORDER;
