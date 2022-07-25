@@ -154,7 +154,7 @@ export class KujiraService {
       .map(o => {
         const res = {
           ...o,
-          dq: Math.abs(Math.abs(o.dq) - prevQuantity)
+          dq: Math.abs(Math.abs(o.dq) - Math.abs(prevQuantity))
         };
         prevQuantity = o.dq;
         return res;
