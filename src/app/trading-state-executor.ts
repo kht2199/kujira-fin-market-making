@@ -103,8 +103,10 @@ export class TradingStateExecutor {
           return;
         }
         const fulfilledOrderIds = currentOrders.fulfilledOrders.map(o => o.idx);
-        if (fulfilledOrderIds.length !== trading.fulfilledOrders.length && trading.fulfilledOrders.length > 0) {
-          kujira.sendMessage(`[orders] filled: ${removeItems(trading.fulfilledOrders, fulfilledOrderIds).map(o => orderToString(o, baseSymbol, quoteSymbol)).join('\n')}`);
+        if (fulfilledOrderIds.length !== trading.fulfilledOrders.length) {
+          if (trading.fulfilledOrders.length > 0) {
+            kujira.sendMessage(`[orders] filled: ${removeItems(trading.fulfilledOrders, fulfilledOrderIds).map(o => orderToString(o, baseSymbol, quoteSymbol)).join('\n')}`);
+          }
           trading.fulfilledOrders = currentOrders.fulfilledOrders;
         }
         // 진행중인 주문이 있는 경우, {n}개의 주문이 완료됨을 기다린다.
