@@ -46,10 +46,6 @@ export class TradingOrders {
     return this.orders.length === 0;
   }
 
-  get isAllClosedOrdersEmpty() {
-    return this._fulfilledOrders.length === 0;
-  }
-
   get orderIds(): string[] {
     return this.orders.map(o => o.idx);
   }

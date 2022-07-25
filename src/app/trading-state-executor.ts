@@ -45,7 +45,7 @@ export class TradingStateExecutor {
         // 진행중인 주문이 있으면, ORDER_CHECK 로 변경한다.
         currentOrders = await kujira.fetchOrders(trading);
         if (currentOrders.length === 1) {
-          trading.state = TradingState.CANCEL_ALL_ORDERS;
+          trading.state = TradingState.CLOSE_ORDERS;
           return;
         } else if (currentOrders.length > 1) {
           trading.state = TradingState.ORDER_CHECK;
@@ -111,9 +111,8 @@ export class TradingStateExecutor {
             kujira.sendMessage(`[orders] filled: ${message}`);
           }
         }
-        // 진행중인 주문이 있는 경우, {n}개의 주문이 완료됨을 기다린다.
         if (currentOrders.lengthFulfilled >= currentOrders.length / 2) {
-          trading.state = TradingState.FULFILLED_ORDERS;
+          trading.state = TradingState.CLOSE_ORDERS;
           return;
         }
 
@@ -129,8 +128,7 @@ export class TradingStateExecutor {
         TradingStateExecutor.logger.log(`[order state] idxs: ${currentOrders.orderIds.join(',')} fulfilled: ${currentOrders.lengthFulfilled}`)
         return;
       case TradingState.ORDER_EMPTY_SIDE_WITH_GAP:
-      case TradingState.FULFILLED_ORDERS:
-      case TradingState.CANCEL_ALL_ORDERS:
+      case TradingState.CLOSE_ORDERS:
         currentOrders = await kujira.fetchOrders(trading);
         if (currentOrders.lengthFilled > 0) {
           const filledOrder: Order[] = currentOrders.filledOrders;
@@ -147,16 +145,6 @@ export class TradingStateExecutor {
           kujira.sendMessage(message);
         }
         trading.state = TradingState.ORDER;
-        return;
-      case TradingState.WAITING_ALL_ORDER_COMPLETE:
-        currentOrders = await kujira.fetchOrders(trading);
-        if (currentOrders.isEmpty) {
-          trading.state = TradingState.ORDER;
-          return;
-        }
-        if (currentOrders.isAllClosedOrdersEmpty) {
-          trading.state = TradingState.FULFILLED_ORDERS;
-        }
         return;
     }
   }
