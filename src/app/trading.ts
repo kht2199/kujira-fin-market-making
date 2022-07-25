@@ -21,6 +21,7 @@ export class Trading {
     private _contract: Contract,
     private _deltaRates: number[],
     private _targetRate: number,
+    private _orderAmountMin: number,
   ) {
     this.uuid = uuid().slice(0, 5);
     this._targetRate = _targetRate;
@@ -76,5 +77,9 @@ export class Trading {
 
   set preparedOrders(value: OrderRequest[]) {
     this._preparedOrders = value;
+  }
+
+  get orderAmountMin(): number {
+    return this._orderAmountMin;
   }
 }

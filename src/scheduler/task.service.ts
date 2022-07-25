@@ -22,6 +22,7 @@ export class TasksService {
       .filter(s => !!s);
     const endpoint = process.env.ENDPOINT;
     const mnemonic = process.env.MNEMONIC;
+    const orderAmountMin = process.env.ORDER_AMOUNT_MIN || 0;
     const contract = kujiraService.getContract(process.env.CONTRACT);
     const baseSymbol = kujiraService.toSymbol(contract.denoms.base)
     const quoteSymbol = kujiraService.toSymbol(contract.denoms.quote)
@@ -35,7 +36,8 @@ export class TasksService {
         }
         return new Trading(
           baseSymbol, quoteSymbol,
-          wallet, contract, rates, targetRate
+          wallet, contract, rates, targetRate,
+          Number(orderAmountMin)
         );
       })
       .then((trading) => kujiraService.addTrading(trading));

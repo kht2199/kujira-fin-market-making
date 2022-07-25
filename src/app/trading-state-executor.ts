@@ -50,8 +50,10 @@ export class TradingStateExecutor {
         kujira.sendMessage(`[stat] value: ${calculateValue(marketPrice)} balance rate: ${calculateRate(marketPrice)} target rate:  ${targetRate}`);
         TradingStateExecutor.logger.debug(`delta: ${deltaRates}, base: ${baseAmount}, quote: ${quoteAmount}, target: ${targetRate}`);
         let tps: OrderMarketMaking[] = deltaRates
-          .map(r => [r, -r]).flat()
-          .map(r => kujira.toOrderMarketMaking(r, marketPrice, baseAmount, quoteAmount, targetRate));
+          .map(r => [r, -r])
+          .map(arr => arr.push(0)).flat()
+          .map(r => kujira.toOrderMarketMaking(r, marketPrice, baseAmount, quoteAmount, targetRate))
+          .filter(o => Math.abs(o.dq) >= trading.orderAmountMin);
         const notNormal = tps.filter(tp => !tp.normal);
         if (notNormal.length > 0) {
           TradingStateExecutor.logger.warn(`[price] found gap between market price{${marketPrice}} and order price{${notNormal[0].price}}`)
