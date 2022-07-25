@@ -25,7 +25,7 @@ export class TradingStateExecutor {
    * @param client TODO remove client dependency at TradingState
    */
   static async next(trading: Trading, kujira: KujiraService, client: KujiraClientService) {
-    const { state, wallet, contract, deltaRates, preparedOrders, baseSymbol, quoteSymbol } = trading;
+    const { state, wallet, contract, deltaRates, baseSymbol, quoteSymbol } = trading;
     let { targetRate } = trading;
     let currentOrders: TradingOrders;
     let message: string;
@@ -85,9 +85,9 @@ export class TradingStateExecutor {
         trading.state = TradingState.ORDER_PREPARED;
         return;
       case TradingState.ORDER_PREPARED:
-        TradingStateExecutor.logger.log(`[orders] ${JSON.stringify(preparedOrders)}`);
-        await client.orders(wallet, preparedOrders);
-        message = preparedOrders
+        TradingStateExecutor.logger.log(`[orders] ${JSON.stringify(trading.preparedOrders)}`);
+        await client.orders(wallet, trading.preparedOrders);
+        message = trading.preparedOrders
           .sort((n1, n2) => desc(n1.price, n2.price))
           .map(o => orderRequestToString(o, baseSymbol, quoteSymbol, contract))
           .join('\n');
