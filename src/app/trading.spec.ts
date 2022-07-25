@@ -38,4 +38,19 @@ describe("Trading.ts", () => {
       expect(order).toMatchObject({ price: 99, side: "Buy" });
     });
   });
+
+  describe("시장가가 상승/하락시 주문정보", () => {
+    const base = 10;
+    const quote = 10;
+    const marketPrice = 100;
+    const targetRate = base * 100 / (base * 100 + quote);
+    it("quantity check", () => {
+      const orders = service.toOrderRequests(null, [
+          { price: 0, base: 0, dq: 1, side: 'Sell', normal: false },
+          { price: 0, base: 0, dq: 2, side: 'Sell', normal: false },
+          { price: 0, base: 0, dq: 3, side: 'Sell', normal: false },
+      ]);
+      console.log(orders);
+    });
+  });
 });

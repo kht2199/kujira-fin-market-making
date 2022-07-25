@@ -1,15 +1,15 @@
 // noinspection JSUnusedGlobalSymbols
 
-import { Injectable, Logger } from "@nestjs/common";
-import { HttpService } from "@nestjs/axios";
-import { Trading } from "../app/trading";
-import { TelegramService } from "nestjs-telegram";
+import {Injectable, Logger} from "@nestjs/common";
+import {HttpService} from "@nestjs/axios";
+import {Trading} from "../app/trading";
+import {TelegramService} from "nestjs-telegram";
 import data from "../../contracts.json";
-import { KujiraClientService } from "./kujira-client-service";
-import { TradingStateExecutor } from "../app/trading-state-executor";
-import { v4 as uuid } from "uuid";
-import { TradingBalance } from "../app/trading-balance";
-import { TradingOrders } from "../app/trading-orders";
+import {KujiraClientService} from "./kujira-client-service";
+import {TradingStateExecutor} from "../app/trading-state-executor";
+import {v4 as uuid} from "uuid";
+import {TradingBalance} from "../app/trading-balance";
+import {TradingOrders} from "../app/trading-orders";
 
 @Injectable()
 export class KujiraService {
@@ -144,20 +144,23 @@ export class KujiraService {
     return { price, base, dq, normal, side: dq > 0 ? 'Buy' : 'Sell'};
   }
 
+  /**
+   * @param contract
+   * @param orders amount should greater than prev item.
+   */
   public toOrderRequests(contract: Contract, orders: OrderMarketMaking[]): OrderRequest[] {
-    let prevQuantities = 0;
+    let prevQuantity = 0;
     return orders
       .map(o => {
-        const quantity = Math.abs(o.dq) - prevQuantities;
-        const o2 = {
+        const res = {
           ...o,
-          dq: quantity
+          dq: o.dq - prevQuantity
         };
-        prevQuantities += quantity;
-        return o2;
+        prevQuantity = o.dq;
+        return res;
       })
       .map(o => {
-        const amount = Math.abs(o.side === 'Sell' ? o.dq : (o.dq * o.price));
+        const amount = o.side === 'Sell' ? o.dq : (o.dq * o.price);
         return {
           uuid: uuid(),
           contract,
