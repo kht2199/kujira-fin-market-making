@@ -71,6 +71,7 @@ TELEGRAM_CHAT_ID=
 - ✅ KUJI/axlUSDC
 - Webpage
   - Configuration
+- Websocket Support for Performance
 - wETH/axlUSDC
 - Test zero-downtime and not suspended
 - Use Database for all data
