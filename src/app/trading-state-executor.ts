@@ -46,8 +46,8 @@ export class TradingStateExecutor {
       case TradingState.ORDER:
         marketPrice = await client.getMarketPrice(wallet, contract);
         trading.balance = await kujira.fetchBalances(wallet, contract);
-        const { baseAmount, quoteAmount, calculateRate, calculateValue } = trading.balance;
-        kujira.sendMessage(`[stat] value: ${calculateValue(marketPrice)} balance rate: ${calculateRate(marketPrice)} target rate:  ${targetRate}`);
+        const { baseAmount, quoteAmount, } = trading.balance;
+        kujira.sendMessage(`[stat] value: ${trading.balance.calculateValue(marketPrice)} balance rate: ${trading.balance.calculateRate(marketPrice)} target rate:  ${targetRate}`);
         TradingStateExecutor.logger.debug(`delta: ${deltaRates}, base: ${baseAmount}, quote: ${quoteAmount}, target: ${targetRate}`);
         let tps: OrderMarketMaking[] = deltaRates
           .map(r => [r, -r])
