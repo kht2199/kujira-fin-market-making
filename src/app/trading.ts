@@ -23,7 +23,7 @@ export class Trading {
     private _targetRate: number,
     private _orderAmountMin: number,
   ) {
-    this.uuid = uuid().slice(0, 5);
+    this.uuid = uuid().slice(0, 6);
     this._targetRate = _targetRate;
   }
 

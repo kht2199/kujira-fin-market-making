@@ -47,7 +47,7 @@ export class KujiraService {
     if (trading.ongoing) return;
     trading.ongoing = true;
     const beforeState = trading.state;
-    this.logger.log(`[start] ${beforeState}`)
+    this.logger.log(`[start] ${trading.uuid} ${beforeState}`)
     try {
       await TradingStateExecutor.next(trading, this, this.client);
       trading.ongoing = false;
