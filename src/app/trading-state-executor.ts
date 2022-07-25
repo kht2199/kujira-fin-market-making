@@ -49,7 +49,7 @@ export class TradingStateExecutor {
         trading.balance = await kujira.fetchBalances(wallet, contract);
         const { baseAmount, quoteAmount} = trading.balance;
         const value = trading.balance.calculateValue(marketPrice).toFixed(5);
-        balanceRate = trading.balance.calculateRate(marketPrice).toFixed(5);
+        balanceRate = trading.balance.calculateRate(marketPrice);
         message = `[stat] value: ${value} ${quoteSymbol}, balance rate: ${balanceRate.toFixed(5)}, target rate: ${targetRate.toFixed(5)}, base: ${baseAmount.toFixed(5)} ${baseSymbol}, quote: ${quoteAmount.toFixed(5)} ${quoteSymbol}`;
         kujira.sendMessage(message);
         TradingStateExecutor.logger.debug(message)
