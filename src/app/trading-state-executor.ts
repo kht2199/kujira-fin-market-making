@@ -118,7 +118,7 @@ export class TradingStateExecutor {
         if (currentOrders.isRemainsOneSide) {
           marketPrice = await client.getMarketPrice(wallet, contract);
           const percent = currentOrders.calculateMinimumPriceGapPercentOfUnfilled(marketPrice);
-          if (percent > 0.02) {
+          if (percent > 0.05) {
             TradingStateExecutor.logger.warn(`[order state] market price: ${marketPrice} percent: ${percent}`);
             trading.state = TradingState.ORDER_EMPTY_SIDE_WITH_GAP;
             return;
