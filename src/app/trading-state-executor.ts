@@ -4,6 +4,7 @@ import { KujiraService } from "../kujira/kujira.service";
 import { KujiraClientService } from "../kujira/kujira-client-service";
 import { Logger } from "@nestjs/common";
 import { TradingState } from "./trading-state";
+import { TradingOrders } from "./trading-orders";
 
 export class TradingStateExecutor {
   private static readonly logger = new Logger(TradingStateExecutor.name);
@@ -18,10 +19,10 @@ export class TradingStateExecutor {
   static async next(trading: Trading, kujira: KujiraService, client: KujiraClientService) {
     const { state, wallet, contract, deltaRates, preparedOrders, baseSymbol, quoteSymbol } = trading;
     let { targetRate } = trading;
-    let currentOrders;
-    let message;
+    let currentOrders: TradingOrders;
+    let message: string;
     let marketPrice: number;
-    let balanceRate;
+    let balanceRate: number;
     switch (state) {
       case TradingState.INITIALIZE:
         marketPrice = await client.getMarketPrice(wallet, contract);
@@ -55,7 +56,10 @@ export class TradingStateExecutor {
         TradingStateExecutor.logger.debug(message)
         let tps: OrderMarketMaking[] = deltaRates
           .map(r => [r, -r])
-          .map(arr => arr.push(0)).flat()
+          .map(arr => {
+            arr.push(0);
+            return arr;
+          }).flat()
           .map(r => kujira.toOrderMarketMaking(r, marketPrice, baseAmount, quoteAmount, targetRate))
           .filter(o => Math.abs(o.dq) >= trading.orderAmountMin);
         const notNormal = tps.filter(tp => !tp.normal);
