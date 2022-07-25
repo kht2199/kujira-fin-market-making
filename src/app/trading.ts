@@ -14,6 +14,8 @@ export class Trading {
 
   private _preparedOrders: OrderRequest[] = [];
 
+  private _fulfilledOrders: Order[] = [];
+
   constructor(
     private readonly _baseSymbol: string,
     private readonly _quoteSymbol: string,
@@ -81,5 +83,13 @@ export class Trading {
 
   get orderAmountMin(): number {
     return this._orderAmountMin;
+  }
+
+  get fulfilledOrders(): Order[] {
+    return this._fulfilledOrders;
+  }
+
+  set fulfilledOrders(value: Order[]) {
+    this._fulfilledOrders = value;
   }
 }

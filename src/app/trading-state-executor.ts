@@ -1,10 +1,18 @@
 import { Trading } from "./trading";
-import { asc, desc } from "../util/util";
+import { asc, desc, removeItems } from "../util/util";
 import { KujiraService } from "../kujira/kujira.service";
 import { KujiraClientService } from "../kujira/kujira-client-service";
 import { Logger } from "@nestjs/common";
 import { TradingState } from "./trading-state";
 import { TradingOrders } from "./trading-orders";
+
+const orderRequestToString = (o: OrderRequest, baseSymbol: string, quoteSymbol, contract: Contract) => {
+  return `${o.side} ${o.amount.toFixed(4)} ${o.side === 'Sell' ? baseSymbol : quoteSymbol} at ${o.price.toFixed(contract.price_precision.decimal_places)} ${quoteSymbol}`
+}
+
+const orderToString = (o: Order, baseSymbol: string, quoteSymbol) => {
+  return `${o.side} ${o.filled_amount} ${o.side === 'Sell' ? baseSymbol : quoteSymbol} at ${o.quote_price} ${quoteSymbol}`
+}
 
 export class TradingStateExecutor {
   private static readonly logger = new Logger(TradingStateExecutor.name);
@@ -81,17 +89,23 @@ export class TradingStateExecutor {
         await client.orders(wallet, preparedOrders);
         message = preparedOrders
           .sort((n1, n2) => desc(n1.price, n2.price))
-          .map(o => `${o.side} ${o.amount.toFixed(4)} ${o.side === 'Sell' ? baseSymbol : quoteSymbol} at ${o.price.toFixed(contract.price_precision.decimal_places)} ${quoteSymbol}`)
+          .map(o => orderRequestToString(o, baseSymbol, quoteSymbol, contract))
           .join('\n');
         kujira.sendMessage(`[orders] submit\n${message}`);
         trading.state = TradingState.ORDER_CHECK;
         trading.preparedOrders = [];
+        trading.fulfilledOrders = [];
         return;
       case TradingState.ORDER_CHECK:
         currentOrders = await kujira.fetchOrders(trading);
         if (currentOrders.length === 0) {
           trading.state = TradingState.ORDER;
           return;
+        }
+        const fulfilledOrderIds = currentOrders.fulfilledOrders.map(o => o.idx);
+        if (fulfilledOrderIds.length !== trading.fulfilledOrders.length) {
+          kujira.sendMessage(`[orders] filled: ${removeItems(trading.fulfilledOrders, fulfilledOrderIds).map(o => orderToString(o, baseSymbol, quoteSymbol)).join('\n')}`);
+          trading.fulfilledOrders = currentOrders.fulfilledOrders;
         }
         // 진행중인 주문이 있는 경우, {n}개의 주문이 완료됨을 기다린다.
         if (currentOrders.lengthFulfilled >= currentOrders.length / 2) {
