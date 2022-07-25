@@ -10,7 +10,7 @@ const orderRequestToString = (o: OrderRequest, baseSymbol: string, quoteSymbol, 
   return `${o.side} ${o.amount.toFixed(4)} ${o.side === 'Sell' ? baseSymbol : quoteSymbol} at ${o.price.toFixed(contract.price_precision.decimal_places)} ${quoteSymbol}`
 }
 
-const orderToString = (o: Order, baseSymbol: string, quoteSymbol) => {
+const orderToString = (o: Order, baseSymbol: string, quoteSymbol: string) => {
   return `${o.side} ${o.filled_amount} ${o.side === 'Sell' ? baseSymbol : quoteSymbol} at ${o.quote_price} ${quoteSymbol}`
 }
 
@@ -107,6 +107,7 @@ export class TradingStateExecutor {
           trading.fulfilledOrders = currentOrders.fulfilledOrders;
           const fulfilledOrdersForMessage = removeItemsFromIds(trading.fulfilledOrders, fulfilledOrderIds);
           if (fulfilledOrdersForMessage.length > 0) {
+            this.logger.log(JSON.stringify(fulfilledOrdersForMessage));
             const message = fulfilledOrdersForMessage.map(o => orderToString(o, baseSymbol, quoteSymbol)).join('\n');
             kujira.sendMessage(`[orders] filled: ${message}`);
           }
