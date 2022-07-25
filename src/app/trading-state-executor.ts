@@ -80,8 +80,8 @@ export class TradingStateExecutor {
           .sort((n1, n2) => asc(n1.price, n2.price));
         const buyOrders = tps.filter(tp => tp.side === 'Buy')
           .sort((n1, n2) => desc(n1.price, n2.price));
-        trading.preparedOrders = [];
-        trading.preparedOrders.push(...kujira.toOrderRequests(contract, sellOrders), ...kujira.toOrderRequests(contract, buyOrders));
+        trading.preparedOrders = [...kujira.toOrderRequests(contract, sellOrders), ...kujira.toOrderRequests(contract, buyOrders)]
+          .filter(o => o.amount !== 0);
         trading.state = TradingState.ORDER_PREPARED;
         return;
       case TradingState.ORDER_PREPARED:
