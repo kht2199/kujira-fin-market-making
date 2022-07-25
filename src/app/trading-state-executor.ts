@@ -59,7 +59,7 @@ export class TradingStateExecutor {
         const { baseAmount, quoteAmount} = trading.balance;
         const value = trading.balance.calculateValue(marketPrice).toFixed(5);
         balanceRate = trading.balance.calculateRate(marketPrice);
-        message = `[stat] value: ${value} ${quoteSymbol}, balance rate: ${balanceRate.toFixed(5)}, target rate: ${targetRate.toFixed(5)}, base: ${baseAmount.toFixed(5)} ${baseSymbol}, quote: ${quoteAmount.toFixed(5)} ${quoteSymbol}`;
+        message = `[stat] value: ${(baseAmount * quoteAmount).toFixed(5)} balance: ${value} ${quoteSymbol}, balance rate: ${balanceRate.toFixed(5)}, target rate: ${targetRate.toFixed(5)}, base: ${baseAmount.toFixed(5)} ${baseSymbol}, quote: ${quoteAmount.toFixed(5)} ${quoteSymbol}`;
         kujira.sendMessage(message);
         TradingStateExecutor.logger.debug(message)
         let tps: OrderMarketMaking[] = deltaRates
