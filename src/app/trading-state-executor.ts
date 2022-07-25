@@ -103,7 +103,7 @@ export class TradingStateExecutor {
           return;
         }
         const fulfilledOrderIds = currentOrders.fulfilledOrders.map(o => o.idx);
-        if (fulfilledOrderIds.length !== trading.fulfilledOrders.length) {
+        if (fulfilledOrderIds.length !== trading.fulfilledOrders.length && trading.fulfilledOrders.length > 0) {
           kujira.sendMessage(`[orders] filled: ${removeItems(trading.fulfilledOrders, fulfilledOrderIds).map(o => orderToString(o, baseSymbol, quoteSymbol)).join('\n')}`);
           trading.fulfilledOrders = currentOrders.fulfilledOrders;
         }
