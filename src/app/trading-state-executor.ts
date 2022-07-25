@@ -21,11 +21,12 @@ export class TradingStateExecutor {
     let currentOrders;
     let message;
     let marketPrice: number;
+    let balanceRate;
     switch (state) {
       case TradingState.INITIALIZE:
         marketPrice = await client.getMarketPrice(wallet, contract);
         trading.balance = await kujira.fetchBalances(wallet, contract);
-        const balanceRate = trading.balance.calculateRate(marketPrice);
+        balanceRate = trading.balance.calculateRate(marketPrice);
         if (!targetRate) {
           targetRate = trading.targetRate = balanceRate;
         }
@@ -46,9 +47,12 @@ export class TradingStateExecutor {
       case TradingState.ORDER:
         marketPrice = await client.getMarketPrice(wallet, contract);
         trading.balance = await kujira.fetchBalances(wallet, contract);
-        const { baseAmount, quoteAmount, } = trading.balance;
-        kujira.sendMessage(`[stat] value: ${trading.balance.calculateValue(marketPrice)} balance rate: ${trading.balance.calculateRate(marketPrice)} target rate:  ${targetRate}`);
-        TradingStateExecutor.logger.debug(`delta: ${deltaRates}, base: ${baseAmount}, quote: ${quoteAmount}, target: ${targetRate}`);
+        const { baseAmount, quoteAmount} = trading.balance;
+        const value = trading.balance.calculateValue(marketPrice).toFixed(5);
+        balanceRate = trading.balance.calculateRate(marketPrice).toFixed(5);
+        message = `[stat] value: ${value} ${quoteSymbol}, balance rate: ${balanceRate.toFixed(5)}, target rate: ${targetRate.toFixed(5)}, base: ${baseAmount.toFixed(5)} ${baseSymbol}, quote: ${quoteAmount.toFixed(5)} ${quoteSymbol}`;
+        kujira.sendMessage(message);
+        TradingStateExecutor.logger.debug(message)
         let tps: OrderMarketMaking[] = deltaRates
           .map(r => [r, -r])
           .map(arr => arr.push(0)).flat()
@@ -67,7 +71,7 @@ export class TradingStateExecutor {
         trading.preparedOrders = [];
         trading.preparedOrders.push(...kujira.toOrderRequests(contract, sellOrders), ...kujira.toOrderRequests(contract, buyOrders));
         trading.state = TradingState.ORDER_PREPARED;
-        return this.next(trading, kujira, client);
+        return;
       case TradingState.ORDER_PREPARED:
         TradingStateExecutor.logger.log(`[orders] ${JSON.stringify(preparedOrders)}`);
         await client.orders(wallet, preparedOrders);
