@@ -31,7 +31,7 @@ export class TasksService {
     if (rates.length <= 1) throw new Error(`RATES length is too short. ${rates.length}`);
     if (interval < 10000) throw new Error(`INTERVAL is too short. ${interval}`);
     if (targetRate <= 0 || targetRate >= 1) throw new Error(`TARGET_RATE should between 0 and 1 or blank. ${targetRate}`);
-    rates.forEach(r => validateRate(r, 'RATES'));
+    rates.forEach(r => validateRate(Math.abs(r), 'RATES'));
     kujiraService.connect(endpoint, mnemonic)
       .then(async wallet => {
         if (!targetRate) {
