@@ -39,8 +39,8 @@ export class TradingStateExecutor {
         if (!targetRate) {
           targetRate = trading.targetRate = balanceRate;
         }
-        if (Math.abs(balanceRate - targetRate) >= deltaRates[0]) {
-          throw new Error(`current rate[${balanceRate}] is greater than config rate[${deltaRates[0]}].`);
+        if (Math.abs(balanceRate - targetRate) > Math.max(...deltaRates.map(r => Math.abs(r)))) {
+          throw new Error(`current wallet ratio [${balanceRate}] must less than config TARGET_RATE`);
         }
         currentOrders = await kujira.fetchOrders(trading);
         if (currentOrders.length === 1) {
