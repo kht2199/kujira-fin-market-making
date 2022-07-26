@@ -96,16 +96,13 @@ export class TradingStateExecutor {
         }
         const fulfilledOrderIds = currentOrders.fulfilledOrders.map(o => o.idx);
         if (fulfilledOrderIds.length !== trading.fulfilledOrders.length) {
-          trading.fulfilledOrders = currentOrders.fulfilledOrders;
           const fulfilledOrdersForMessage = removeItemsFromIds(trading.fulfilledOrders, fulfilledOrderIds);
-          this.logger.debug(`fulfilledOrders: ${JSON.stringify(trading.fulfilledOrders)}`);
-          this.logger.debug(`fulfilledOrderIds: ${fulfilledOrderIds}`);
-          this.logger.debug(`fulfilledOrdersForMessage: ${fulfilledOrdersForMessage}`);
           if (fulfilledOrdersForMessage.length > 0) {
             this.logger.log(JSON.stringify(fulfilledOrdersForMessage));
             const message = fulfilledOrdersForMessage.map(o => orderToString(o, baseSymbol, quoteSymbol)).join('\n');
             kujira.sendMessage(`[orders] filled: ${message}`);
           }
+          trading.fulfilledOrders = currentOrders.fulfilledOrders;
         }
         if (currentOrders.lengthFulfilled >= currentOrders.length / 2) {
           trading.state = TradingState.CLOSE_ORDERS;
