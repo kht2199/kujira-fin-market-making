@@ -41,7 +41,7 @@ pm2 log
 $ vi env
 
 INTERVAL=10000
-RATES=0.005,0.01,0.015,0.02,0.025
+RATES=-0.025,-0.02,-0.015,-0.005,0,0.01,0.015,0.02,0.025
 MNEMONIC=""
 CHAIN_ID=kaiyo-1
 ENDPOINT=https://rpc.kaiyo.kujira.setten.io
@@ -56,7 +56,7 @@ TELEGRAM_CHAT_ID=
 ## What is each value means?
 | name              | description                                                                                                                                                                                                                                       | should modify? |
 |-------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------|
-| *RATES            | Sets a range of prices to execute an order against the current price. When 0.01 is set, order information for 0,0.01, -0.01 of the current price is created.                                                                                      | Y              |
+| *RATES            | Sets a range of prices to execute an order against the current price. When -0.01,0,0.01 is set, order information for -0.01,0,0.01 of the current price is created.                                                                               | Y              |
 | *MNEMONIC         | The key value of the wallet. It can be obtained when creating a wallet. If exposed, you may lose ownership of your wallet, so be careful.                                                                                                         | Y              |
 | *ORDER_AMOUNT_MIN | It happens that too few quantities are valued at a certain price. A small amount can be ignored as the commission can increase as the number of orders.                                                                                           | Y              |
 | *TARGET_RATE      | In the KUJI/axlUSD market, the `total asset` of the wallet is `KUJI * Market Price + axlUSD`, and the value ratio is `KUJI * Market Price / Total Asset`. The default is blank, keeping the percentage of the wallet at the start of the program. | Y              |

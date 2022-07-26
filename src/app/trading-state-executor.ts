@@ -42,7 +42,6 @@ export class TradingStateExecutor {
         if (Math.abs(balanceRate - targetRate) >= deltaRates[0]) {
           throw new Error(`current rate[${balanceRate}] is greater than config rate[${deltaRates[0]}].`);
         }
-        // 진행중인 주문이 있으면, ORDER_CHECK 로 변경한다.
         currentOrders = await kujira.fetchOrders(trading);
         if (currentOrders.length === 1) {
           trading.state = TradingState.CLOSE_ORDERS;
@@ -64,11 +63,6 @@ export class TradingStateExecutor {
         kujira.sendMessage(message);
         TradingStateExecutor.logger.debug(message)
         let tps: OrderMarketMaking[] = deltaRates
-          .map(r => [r, -r])
-          .map(arr => {
-            arr.push(0);
-            return arr;
-          }).flat()
           .map(r => kujira.toOrderMarketMaking(r, marketPrice, baseAmount, quoteAmount, targetRate))
           .filter(o => Math.abs(o.dq) >= trading.orderAmountMin);
         const notNormal = tps.filter(tp => !tp.normal);
@@ -76,7 +70,6 @@ export class TradingStateExecutor {
           TradingStateExecutor.logger.warn(`[price] found gap between market price{${marketPrice}} and order price{${notNormal[0].price}}`)
           TradingStateExecutor.logger.warn(`[orders] prepared: ${JSON.stringify(tps)}`)
         }
-        // 주문수량의 주문정보{o}를 생성한다.
         const sellOrders = tps.filter(tp => tp.side === 'Sell')
           .sort((n1, n2) => asc(n1.price, n2.price));
         const buyOrders = tps.filter(tp => tp.side === 'Buy')

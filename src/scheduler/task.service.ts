@@ -18,8 +18,7 @@ export class TasksService {
     const interval = process.env.INTERVAL || 5000;
     const rates: number[] = process.env.RATES.split(',')
       .map(s => s.trim())
-      .map(s => Number(s))
-      .filter(s => !!s);
+      .map(s => Number(s));
     const endpoint = process.env.ENDPOINT;
     const mnemonic = process.env.MNEMONIC;
     const orderAmountMin = process.env.ORDER_AMOUNT_MIN || 0;
