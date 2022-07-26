@@ -30,7 +30,6 @@ export class TasksService {
     // validation
     if (rates.length <= 1) throw new Error(`RATES length is too short. ${rates.length}`);
     if (interval < 10000) throw new Error(`INTERVAL is too short. ${interval}`);
-    validateRate(interval, 'TARGET_RATE');
     if (targetRate <= 0 || targetRate >= 1) throw new Error(`TARGET_RATE should between 0 and 1 or blank. ${targetRate}`);
     rates.forEach(r => validateRate(r, 'RATES'));
     kujiraService.connect(endpoint, mnemonic)
