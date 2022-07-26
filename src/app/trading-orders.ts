@@ -72,6 +72,6 @@ export class TradingOrders {
    */
   calculateMinimumPriceGapPercentOfUnfilled(marketPrice: number): number {
     const gap = this.calculateMinimumPriceGapOfUnfilled(marketPrice);
-    return Math.abs(marketPrice - gap) / marketPrice;
+    return gap / marketPrice;
   }
 }
