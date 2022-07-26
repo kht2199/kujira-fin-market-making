@@ -84,5 +84,14 @@ TELEGRAM_CHAT_ID=
 - Client Application. 
   - I'm considering [tauri](https://tauri.app/) framework.
 
+# Troubleshooting
+If the library does not downloaded. `kujira.js`
+```bash
+# try this, and restart your application.
+rm yarn.lock && rm -rf node_modules && yarn
+```
+![img.png](https://cdn.discordapp.com/attachments/1001151256863191071/1001416928721641593/Screenshot_2022-07-26_at_5.12.21_PM.png)
+
+
 # Donation
 delegate $KUJI to [Seoul Forest Node](https://blue.kujira.app/stake/kujiravaloper1ewcnz9w06u0xpqh9varg87rwnu4hy763uuxz6t)  
