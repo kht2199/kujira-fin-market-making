@@ -37,8 +37,9 @@ pm2 log
 ```
 
 # Config
-.env.production
 ```bash
+$ vi env
+
 INTERVAL=10000
 RATES=0.005,0.01,0.015,0.02,0.025
 MNEMONIC=""
