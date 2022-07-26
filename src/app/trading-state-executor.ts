@@ -100,7 +100,7 @@ export class TradingStateExecutor {
           if (fulfilledOrdersForMessage.length > 0) {
             this.logger.log(JSON.stringify(fulfilledOrdersForMessage));
             const message = fulfilledOrdersForMessage.map(o => orderToString(o, baseSymbol, quoteSymbol)).join('\n');
-            kujira.sendMessage(`[orders] filled\n${message}`);
+            kujira.sendMessage(`[orders] filled: ${message}`);
           }
           trading.fulfilledOrders = currentOrders.fulfilledOrders;
         }
