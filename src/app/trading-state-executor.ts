@@ -87,8 +87,6 @@ export class TradingStateExecutor {
           .join('\n');
         kujira.sendMessage(`[orders] submit\n${message}`);
         trading.state = TradingState.ORDER_CHECK;
-        trading.preparedOrders = [];
-        trading.fulfilledOrders = [];
         return;
       case TradingState.ORDER_CHECK:
         currentOrders = await kujira.fetchOrders(trading);
@@ -100,6 +98,9 @@ export class TradingStateExecutor {
         if (fulfilledOrderIds.length !== trading.fulfilledOrders.length) {
           trading.fulfilledOrders = currentOrders.fulfilledOrders;
           const fulfilledOrdersForMessage = removeItemsFromIds(trading.fulfilledOrders, fulfilledOrderIds);
+          this.logger.debug(`fulfilledOrders: ${JSON.stringify(trading.fulfilledOrders)}`);
+          this.logger.debug(`fulfilledOrderIds: ${fulfilledOrderIds}`);
+          this.logger.debug(`fulfilledOrdersForMessage: ${fulfilledOrdersForMessage}`);
           if (fulfilledOrdersForMessage.length > 0) {
             this.logger.log(JSON.stringify(fulfilledOrdersForMessage));
             const message = fulfilledOrdersForMessage.map(o => orderToString(o, baseSymbol, quoteSymbol)).join('\n');

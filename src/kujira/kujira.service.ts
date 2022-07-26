@@ -112,8 +112,6 @@ export class KujiraService {
     const balances = await this.client.getBalances(wallet, contract);
     const base = balances.filter((b) => b.denom === contract.denoms.base)[0];
     const quote = balances.filter((b) => b.denom === contract.denoms.quote)[0];
-    const baseSymbol = this.toSymbol(base.denom);
-    const quoteSymbol = this.toSymbol(quote.denom);
     if (!base) {
       const message = `invalid base balance: ${contract.denoms.base}`;
       throw new Error(message);
@@ -122,6 +120,8 @@ export class KujiraService {
       const message = `invalid quote balance: ${contract.denoms.quote}`;
       throw new Error(message);
     }
+    const baseSymbol = this.toSymbol(base.denom);
+    const quoteSymbol = this.toSymbol(quote.denom);
     return new TradingBalance(base, quote, baseSymbol, quoteSymbol);
   }
 

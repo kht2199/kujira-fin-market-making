@@ -4,6 +4,7 @@ import { KujiraService } from "../kujira/kujira.service";
 import { Trading } from "../app/trading";
 import { TelegramService } from "nestjs-telegram";
 import { KujiraClientService } from "../kujira/kujira-client-service";
+import { validateRate } from "../util/util";
 
 @Injectable()
 export class TasksService {
@@ -15,7 +16,7 @@ export class TasksService {
     private clientService: KujiraClientService,
   ) {
 
-    const interval = process.env.INTERVAL || 5000;
+    const interval = +process.env.INTERVAL || 10000;
     const rates: number[] = process.env.RATES.split(',')
       .map(s => s.trim())
       .map(s => Number(s));
@@ -25,9 +26,15 @@ export class TasksService {
     const contract = kujiraService.getContract(process.env.CONTRACT);
     const baseSymbol = kujiraService.toSymbol(contract.denoms.base)
     const quoteSymbol = kujiraService.toSymbol(contract.denoms.quote)
+    let targetRate = +process.env.TARGET_RATE || undefined;
+    // validation
+    if (rates.length <= 1) throw new Error(`RATES length is too short. ${rates.length}`);
+    if (interval < 10000) throw new Error(`INTERVAL is too short. ${interval}`);
+    validateRate(interval, 'TARGET_RATE');
+    if (targetRate <= 0 || targetRate >= 1) throw new Error(`TARGET_RATE should between 0 and 1 or blank. ${targetRate}`);
+    rates.forEach(r => validateRate(r, 'RATES'));
     kujiraService.connect(endpoint, mnemonic)
       .then(async wallet => {
-        let targetRate = process.env.TARGET_RATE ? Number(process.env.TARGET_RATE) : undefined;
         if (!targetRate) {
           const balances = await this.kujiraService.fetchBalances(wallet, contract);
           const marketPrice = await clientService.getMarketPrice(wallet, contract);

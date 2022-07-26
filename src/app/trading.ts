@@ -34,6 +34,12 @@ export class Trading {
   }
 
   set state(value: TradingState) {
+    switch (value) {
+      case TradingState.ORDER_CHECK:
+        this.preparedOrders = [];
+        this.fulfilledOrders = [];
+        break;
+    }
     this._state = value;
   }
 
