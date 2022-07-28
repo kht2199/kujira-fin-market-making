@@ -46,6 +46,9 @@ export class TasksService {
         );
       })
       .then((trading) => kujiraService.addTrading(trading));
+    if (process.env.SCHEDULE === 'false') {
+      return;
+    }
     this.addNewInterval(
       'Market Making',
       +interval,

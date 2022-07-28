@@ -2,6 +2,8 @@ import { AccountData, OfflineSigner } from '@cosmjs/launchpad';
 import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing';
 import { OrderResponse } from 'kujira.js/lib/cjs/fin';
+import { TradingState } from "../app/trading-state";
+import { TradingBalance } from "../app/trading-balance";
 
 declare global {
   type Denom =
@@ -67,6 +69,22 @@ declare global {
     dq: number;
     side: OrderSide;
     normal: boolean;
+  }
+
+  export interface TradingDto {
+    uuid: string;
+    state: TradingState;
+    balance: TradingBalance;
+    balanceRate: number | undefined;
+    wallet: {
+      account: {
+        address: string;
+      }
+    };
+    contract: Contract;
+    deltaRates: number[];
+    targetRate: number | undefined;
+    orderAmountMin: number;
   }
 }
 

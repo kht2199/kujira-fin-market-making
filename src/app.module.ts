@@ -1,11 +1,10 @@
-import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { ScheduleModule } from '@nestjs/schedule';
-import { TasksService } from './scheduler/task.service';
-import { ConfigModule } from '@nestjs/config';
-import { HttpModule } from '@nestjs/axios';
-import { KujiraService } from './kujira/kujira.service';
+import { Module } from "@nestjs/common";
+import { AppController } from "./app.controller";
+import { ScheduleModule } from "@nestjs/schedule";
+import { TasksService } from "./scheduler/task.service";
+import { ConfigModule } from "@nestjs/config";
+import { HttpModule } from "@nestjs/axios";
+import { KujiraService } from "./kujira/kujira.service";
 import { TelegramModule } from "nestjs-telegram";
 import { KujiraClientService } from "./kujira/kujira-client-service";
 
@@ -21,6 +20,6 @@ import { KujiraClientService } from "./kujira/kujira-client-service";
     }),
   ],
   controllers: [AppController],
-  providers: [AppService, TasksService, KujiraService, KujiraClientService],
+  providers: [TasksService, KujiraService, KujiraClientService],
 })
 export class AppModule {}

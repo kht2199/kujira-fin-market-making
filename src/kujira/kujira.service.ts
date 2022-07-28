@@ -1,22 +1,23 @@
 // noinspection JSUnusedGlobalSymbols
 
-import {Injectable, Logger} from "@nestjs/common";
-import {HttpService} from "@nestjs/axios";
-import {Trading} from "../app/trading";
-import {TelegramService} from "nestjs-telegram";
+import { Injectable, Logger } from "@nestjs/common";
+import { HttpService } from "@nestjs/axios";
+import { Trading } from "../app/trading";
+import { TelegramService } from "nestjs-telegram";
 import data from "../../contracts.json";
-import {KujiraClientService} from "./kujira-client-service";
-import {TradingStateExecutor} from "../app/trading-state-executor";
-import {v4 as uuid} from "uuid";
-import {TradingBalance} from "../app/trading-balance";
-import {TradingOrders} from "../app/trading-orders";
+import { KujiraClientService } from "./kujira-client-service";
+import { TradingStateExecutor } from "../app/trading-state-executor";
+import { v4 as uuid } from "uuid";
+import { TradingBalance } from "../app/trading-balance";
+import { TradingOrders } from "../app/trading-orders";
+import { TradingState } from "../app/trading-state";
 
 @Injectable()
 export class KujiraService {
   // noinspection JSUnusedLocalSymbols
   private readonly logger = new Logger(KujiraService.name);
 
-  private tradings: Trading[] = [];
+  private _tradings: Trading[] = [];
 
   private contracts: Contract[] = data as Contract[];
 
@@ -40,11 +41,11 @@ export class KujiraService {
   }
 
   startMarketMakings() {
-    (async () => await Promise.all(this.tradings.map(trading => this.startMarketMaking(trading))))();
+    (async () => await Promise.all(this._tradings.map(trading => this.startMarketMaking(trading))))();
   }
 
   private async startMarketMaking(trading: Trading) {
-    if (trading.ongoing) return;
+    if (trading.ongoing || trading.state === TradingState.STOP) return;
     trading.ongoing = true;
     const beforeState = trading.state;
     this.logger.log(`[start] ${trading.uuid} ${beforeState}`)
@@ -72,7 +73,7 @@ export class KujiraService {
   }
 
   addTrading(trading: Trading) {
-    this.tradings.push(trading);
+    this._tradings.push(trading);
   }
 
   toSymbol(denom: Denom) {
@@ -169,5 +170,49 @@ export class KujiraService {
           amount,
         }
       });
+  }
+
+  private toTradingDto(trading: Trading, price?: number): TradingDto {
+
+    return {
+      uuid: trading.uuid,
+      state: trading.state,
+      balance: trading.balance,
+      balanceRate: price ? trading.balance.calculateRate(price) : undefined,
+      wallet: {
+        account: {
+          address: trading.wallet.account.address,
+        }
+      },
+      contract: trading.contract,
+      deltaRates: trading.deltaRates,
+      targetRate: trading.targetRate,
+      orderAmountMin: trading.orderAmountMin,
+    };
+  }
+
+  getTradings(): TradingDto[] {
+    return this._tradings.map(this.toTradingDto)
+  }
+  async getTrading(id: string): Promise<TradingDto> {
+    const trading = this._tradings
+      .filter(t => t.uuid === id)[0]
+    if (!trading) throw new Error();
+    return this.fetchBalances(trading.wallet, trading.contract)
+      .then(async res => {
+        const price = await this.client.getMarketPrice(trading.wallet, trading.contract);
+        trading.balance = res;
+        return this.toTradingDto(trading, price);
+      });
+  }
+
+  modifyTrading(body: TradingDto) {
+    const trading = this._tradings.filter(t => t.uuid === body.uuid)[0];
+    if (!trading) throw new Error(body.uuid);
+    trading.state = body.state;
+    trading.deltaRates = body.deltaRates
+    trading.orderAmountMin = body.orderAmountMin;
+    trading.targetRate = body.targetRate;
+    return this.toTradingDto(trading);
   }
 }

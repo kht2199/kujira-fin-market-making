@@ -63,6 +63,14 @@ export class Trading {
     return this._deltaRates;
   }
 
+  set deltaRates(value: number[]) {
+    this._deltaRates = value;
+  }
+
+  set orderAmountMin(value: number) {
+    this._orderAmountMin = value;
+  }
+
   get baseSymbol(): string {
     return this._baseSymbol;
   }
