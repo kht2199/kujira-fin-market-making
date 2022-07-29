@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpStatus, Param, Patch, Post, Res } from "@nestjs/common";
+import { Body, Controller, Get, HttpStatus, Param, Post, Res } from "@nestjs/common";
 import { Response } from "express";
 import { KujiraService } from "./kujira/kujira.service";
 
@@ -27,13 +27,13 @@ export class AppController {
       .json(trading);
   }
 
-  @Patch('/tradings/:id/resume')
+  @Post('/tradings/:id/resume')
   resumeTrading(@Param('id') id: string, @Res() res: Response) {
     this.kujiraService.resumeTrading(id);
     res.status(HttpStatus.OK).send();
   }
 
-  @Patch('/tradings/:id/stop')
+  @Post('/tradings/:id/stop')
   stopTrading(@Param('id') id: string, @Res() res: Response) {
     this.kujiraService.stopTrading(id);
     res.status(HttpStatus.OK).send();
