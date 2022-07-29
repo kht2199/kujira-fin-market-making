@@ -16,6 +16,8 @@ export class Trading {
 
   private _fulfilledOrders: Order[] = [];
 
+  lastMarketPrice: number;
+
   constructor(
     private readonly _baseSymbol: string,
     private readonly _quoteSymbol: string,
@@ -27,6 +29,10 @@ export class Trading {
   ) {
     this.uuid = uuid().slice(0, 6);
     this._targetRate = _targetRate;
+  }
+
+  isChangedPrice(marketPrice: number) {
+    return this.lastMarketPrice !== marketPrice;
   }
 
   get state(): TradingState {
@@ -106,4 +112,5 @@ export class Trading {
   set fulfilledOrders(value: Order[]) {
     this._fulfilledOrders = value;
   }
+
 }

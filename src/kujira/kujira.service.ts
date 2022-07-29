@@ -209,10 +209,21 @@ export class KujiraService {
   modifyTrading(body: TradingDto) {
     const trading = this._tradings.filter(t => t.uuid === body.uuid)[0];
     if (!trading) throw new Error(body.uuid);
-    trading.state = body.state;
     trading.deltaRates = body.deltaRates
     trading.orderAmountMin = body.orderAmountMin;
     trading.targetRate = body.targetRate;
     return this.toTradingDto(trading);
+  }
+
+  stopTrading(id: string) {
+    const trading = this._tradings.filter(t => t.uuid === id)[0];
+    if (!trading) throw new Error(id);
+    trading.state = TradingState.STOP;
+  }
+
+  resumeTrading(id: string) {
+    const trading = this._tradings.filter(t => t.uuid === id)[0];
+    if (!trading) throw new Error(id);
+    trading.state = TradingState.INITIALIZE;
   }
 }

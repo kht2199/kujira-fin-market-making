@@ -89,6 +89,11 @@ export class TradingStateExecutor {
         trading.state = TradingState.ORDER_CHECK;
         return;
       case TradingState.ORDER_CHECK:
+        marketPrice = await client.getMarketPrice(wallet, contract);
+        if (!trading.isChangedPrice(marketPrice)) {
+          return;
+        }
+        trading.lastMarketPrice = marketPrice;
         currentOrders = await kujira.fetchOrders(trading);
         if (currentOrders.length === 0) {
           trading.state = TradingState.ORDER;
@@ -110,7 +115,6 @@ export class TradingStateExecutor {
         }
 
         if (currentOrders.isRemainsOneSide) {
-          marketPrice = await client.getMarketPrice(wallet, contract);
           const percent = currentOrders.calculateMinimumPriceGapPercentOfUnfilled(marketPrice);
           if (percent > 0.05) {
             TradingStateExecutor.logger.warn(`[order state] market price: ${marketPrice} percent: ${percent}`);
