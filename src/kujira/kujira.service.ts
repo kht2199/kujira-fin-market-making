@@ -192,9 +192,23 @@ export class KujiraService {
       this.logger.error(`trading[${uuid}] is not exists.`)
       throw new Error(uuid);
     }
+    const messages = [];
+    if (trading.deltaRates.length !== body.deltaRates.length
+        || trading.deltaRates.filter(d => body.deltaRates.indexOf(d) === -1).length > 0) {
+      messages.push(`rates: ${trading.deltaRates} to ${body.deltaRates}`);
+    }
+    if (trading.orderAmountMin !== body.orderAmountMin) {
+      messages.push(`minimum amount: ${trading.orderAmountMin} to ${body.orderAmountMin}`);
+    }
+    if (trading.targetRate !== body.targetRate) {
+      messages.push(`minimum amount: ${trading.targetRate} to ${body.targetRate}`);
+    }
     trading.deltaRates = body.deltaRates
     trading.orderAmountMin = body.orderAmountMin;
     trading.targetRate = body.targetRate;
+    if (messages.length > 0) {
+      this.sendMessage(`[config] changed manually\n${messages.join('\n')}`);
+    }
     return new TradingDto(trading);
   }
 
