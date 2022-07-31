@@ -58,7 +58,6 @@ TELEGRAM_CHAT_ID=
 | name              | description                                                                                                                                             | should modify? |
 |-------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|----------------|
 | *MNEMONIC         | The key value of the wallet. It can be obtained when creating a wallet. If exposed, you may lose ownership of your wallet, so be careful.               | Y              |
-| *ORDER_AMOUNT_MIN | It happens that too few quantities are valued at a certain price. A small amount can be ignored as the commission can increase as the number of orders. | Y              |
 | VERSION           | To check whether the versions match between the UI and the site                                                                                         | N              |
 | CHAIN_ID          | Testnet or Mainnet ID                                                                                                                                   | N              |
 | ENDPOINT          | RPC server address                                                                                                                                      | N              |
