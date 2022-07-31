@@ -106,4 +106,12 @@ export class Trading {
     this._fulfilledOrders = value;
   }
 
+  toString() {
+    const messages = [];
+    messages.push(`uuid: ${this.uuid}`);
+    messages.push(`rates: ${this._deltaRates}`);
+    messages.push(`target rate: ${this.targetRate}`);
+    messages.push(`minimum order: ${this.orderAmountMin}`);
+    return messages.join('\n');
+  }
 }

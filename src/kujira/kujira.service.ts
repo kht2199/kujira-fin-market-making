@@ -90,6 +90,8 @@ export class KujiraService {
 
   addTrading(wallet: Wallet, trading: Trading) {
     if (!this.wallets.has(wallet)) throw new Error('wallet not found in map');
+    const [base, quote] = this.getSymbol(trading.contract);
+    this.sendMessage(`[trading] Market [${base}/${quote}] added to account[${wallet.account.address}] manually\n${trading.toString()}`);
     this.wallets.get(wallet).push(trading);
   }
 
