@@ -37,17 +37,17 @@ pm2 log
 ```
 
 # Config
+You can change the settings through the website below.   
+[https, https://fin.taek.kim](https://fin.taek.kim)  
+if your server use `http` protocol, use this link [http://fin.taek.kim](http://fin.taek.kim)
 ```bash
 $ vi env
-
 INTERVAL=10000
-RATES=-0.025,-0.02,-0.015,-0.005,0,0.01,0.015,0.02,0.025
+# comma separated value. e.g. "keyword1 keyword2, keyword3 keyword4..."
 MNEMONIC=""
 CHAIN_ID=kaiyo-1
 ENDPOINT=https://rpc.kaiyo.kujira.setten.io
 ENDPOINT_LCD=https://lcd.kaiyo.kujira.setten.io
-CONTRACT=kujira14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sl4e867
-ORDER_AMOUNT_MIN=0.005
 TARGET_RATE=
 TELEGRAM_BOT=
 TELEGRAM_CHAT_ID=
@@ -56,30 +56,26 @@ TELEGRAM_CHAT_ID=
 ## What is each value means?
 | name              | description                                                                                                                                                                                                                                       | should modify? |
 |-------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------|
-| *RATES            | Sets a range of prices to execute an order against the current price. When -0.01,0,0.01 is set, order information for -0.01,0,0.01 of the current price is created.                                                                               | Y              |
 | *MNEMONIC         | The key value of the wallet. It can be obtained when creating a wallet. If exposed, you may lose ownership of your wallet, so be careful.                                                                                                         | Y              |
 | *ORDER_AMOUNT_MIN | It happens that too few quantities are valued at a certain price. A small amount can be ignored as the commission can increase as the number of orders.                                                                                           | Y              |
-| *TARGET_RATE      | In the KUJI/axlUSD market, the `total asset` of the wallet is `KUJI * Market Price + axlUSD`, and the value ratio is `KUJI * Market Price / Total Asset`. The default is blank, keeping the percentage of the wallet at the start of the program. | Y              |
 | CHAIN_ID          | Testnet or Mainnet ID                                                                                                                                                                                                                             | N              |
 | ENDPOINT          | RPC server address                                                                                                                                                                                                                                | N              |
 | ENDPOINT_LCD      | LCD server address                                                                                                                                                                                                                                | N              |
 | INTERVAL          | An application has one state value. According to the scheduling, the code according to the state is executed, and it is an interval for the schedule.                                                                                             | N              |
-| CONTRACT          | The address of the FIN market contract to execute the order. default is KUJI/axlUSD                                                                                                                                                               | N              |
 | TELEGRAM_BOT      | Telegram bot ID to send transaction details                                                                                                                                                                                                       | N              |
 | TELEGRAM_CHAT_ID  | Telegram chat ID to receive transaction details                                                                                                                                                                                                   | N              |
 
 # Everyone has a plan. Of course, I am too
 - ✅ KUJI/axlUSDC
-- Webpage
-  - Configuration
+- ✅ Webpage
+  - ✅ Configuration
+- ✅ Support multiple wallet
 - Websocket Support for Performance
 - wETH/axlUSDC
-- Test zero-downtime and not suspended
 - Use Database for all data
   - Statistics
     - daily/monthly valuation change
 - Create apis for data
-- Support multiple wallet
 - UI for statistics
 - Support combine with CEX
 - Client Application. 
