@@ -1,4 +1,4 @@
-import { Coin, coins, DeliverTxResponse, GasPrice, MsgSendEncodeObject } from "@cosmjs/stargate";
+import { coins, DeliverTxResponse, GasPrice, MsgSendEncodeObject } from "@cosmjs/stargate";
 import * as kujiraClient from "kujira.js";
 import { FinClient, registry, tx } from "kujira.js";
 import { MsgSend } from "cosmjs-types/cosmos/bank/v1beta1/tx";
@@ -10,6 +10,8 @@ import { BookResponse } from "kujira.js/lib/cjs/fin";
 import { HttpService } from "@nestjs/axios";
 import { Injectable } from "@nestjs/common";
 import { OrderResponse } from "kujira.js/src/fin";
+import { Contract } from "../app/contract";
+import { Wallet } from "../app/wallet";
 
 @Injectable()
 export class KujiraClientService {
@@ -22,29 +24,11 @@ export class KujiraClientService {
     private readonly httpService: HttpService,
   ) {}
 
-  getBalance(wallet: Wallet, contract: Contract, denom: Denom): Promise<Balance> {
-    return wallet.client.getBalance(wallet.account.address, denom)
-      .then((coin: Coin) => ({
-        amount: `${
-          +coin.amount / 10 ** (6 + (contract.decimal_delta || 0))
-        }`,
-        denom: coin.denom as Denom,
-      }))
-  }
-
-  getBalances(wallet: Wallet, contract: Contract): Promise<Balance[]> {
+  getBalances(wallet: Wallet): Promise<Balance[]> {
     return lastValueFrom(
       this.httpService.get(`${this._balanceUrl}/${wallet.account.address}`)
         .pipe(
           map((res) => res.data.balances),
-          map((balances) =>
-            balances.map((coin: Coin) => ({
-              amount: `${
-                +coin.amount / 10 ** (6 + (contract.decimal_delta || 0))
-              }`,
-              denom: coin.denom as Denom,
-            })),
-          ),
         ),
     );
   }
@@ -85,14 +69,13 @@ export class KujiraClientService {
         gasPrice: GasPrice.fromString('0.00125ukuji'),
       });
     const accounts = await signer.getAccounts();
-    const wallet: Wallet = {
+    return new Wallet({
       client,
       signer,
       account: accounts[0],
       endpoint,
       mnemonic,
-    };
-    return wallet;
+    });
   }
 
   async orders(wallet: Wallet, orders: OrderRequest[]): Promise<DeliverTxResponse> {

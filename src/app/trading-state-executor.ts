@@ -5,6 +5,7 @@ import { KujiraClientService } from "../kujira/kujira-client-service";
 import { Logger } from "@nestjs/common";
 import { TradingState } from "./trading-state";
 import { TradingOrders } from "./trading-orders";
+import { Contract } from "./contract";
 
 const orderRequestToString = (o: OrderRequest, baseSymbol: string, quoteSymbol, contract: Contract) => {
   return `${o.side} ${o.amount.toFixed(4)} ${o.side === 'Sell' ? baseSymbol : quoteSymbol} at ${o.price.toFixed(contract.price_precision.decimal_places)} ${quoteSymbol}`
@@ -25,7 +26,8 @@ export class TradingStateExecutor {
    * @param client TODO remove client dependency at TradingState
    */
   static async next(trading: Trading, kujira: KujiraService, client: KujiraClientService) {
-    const { state, wallet, contract, deltaRates, baseSymbol, quoteSymbol } = trading;
+    const { state, wallet, contract, deltaRates } = trading;
+    const [baseSymbol, quoteSymbol] = kujira.getSymbol(contract);
     let { targetRate } = trading;
     let currentOrders: TradingOrders;
     let message: string;
@@ -76,6 +78,10 @@ export class TradingStateExecutor {
           .sort((n1, n2) => desc(n1.price, n2.price));
         trading.preparedOrders = [...kujira.toOrderRequests(contract, sellOrders), ...kujira.toOrderRequests(contract, buyOrders)]
           .filter(o => o.amount !== 0);
+        if (trading.preparedOrders.length === 0) {
+          this.logger.log('prepared orders empty');
+          return;
+        }
         trading.state = TradingState.ORDER_PREPARED;
         return;
       case TradingState.ORDER_PREPARED:
@@ -125,6 +131,7 @@ export class TradingStateExecutor {
         TradingStateExecutor.logger.log(`[order state] idxs: ${currentOrders.orderIds.join(',')} fulfilled: ${currentOrders.lengthFulfilled}`)
         return;
       case TradingState.ORDER_EMPTY_SIDE_WITH_GAP:
+      case TradingState.CLOSE_FOR_STOP:
       case TradingState.CLOSE_ORDERS:
         currentOrders = await kujira.fetchOrders(trading);
         if (currentOrders.lengthFilled > 0) {
@@ -140,6 +147,10 @@ export class TradingStateExecutor {
           TradingStateExecutor.logger.log(message);
           await client.ordersCancel(wallet, contract, unfulfilledOrders);
           kujira.sendMessage(message);
+        }
+        if (state === TradingState.CLOSE_FOR_STOP) {
+          trading.state = TradingState.STOP;
+          return
         }
         trading.state = TradingState.ORDER;
         return;

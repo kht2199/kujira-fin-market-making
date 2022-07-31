@@ -1,6 +1,6 @@
 // noinspection JSUnusedGlobalSymbols
 
-import { Injectable, Logger } from "@nestjs/common";
+import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { HttpService } from "@nestjs/axios";
 import { Trading } from "../app/trading";
 import { TelegramService } from "nestjs-telegram";
@@ -11,15 +11,30 @@ import { v4 as uuid } from "uuid";
 import { TradingBalance } from "../app/trading-balance";
 import { TradingOrders } from "../app/trading-orders";
 import { TradingState } from "../app/trading-state";
+import { Contract } from "../app/contract";
+import { Wallet } from "../app/wallet";
+import { TradingDto } from "../dto/trading.dto";
+import { WalletDto } from "../dto/wallet.dto";
+import { Coin } from "@cosmjs/stargate";
+import coinsJson from '../../denoms.json'
+import { TradingAddDto } from "../dto/trading-add.dto";
+import { ResponseDto } from "../dto/response.dto";
 
 @Injectable()
 export class KujiraService {
   // noinspection JSUnusedLocalSymbols
   private readonly logger = new Logger(KujiraService.name);
 
-  private _tradings: Trading[] = [];
+  private wallets: Map<Wallet, Trading[]> = new Map<Wallet, Trading[]>();
 
-  private contracts: Contract[] = data as Contract[];
+  private contracts: Contract[] = data.map(d => new Contract(d)) as Contract[];
+
+  public static readonly denomSymbolMap: Map<string, { denom: Denom, symbol: string, decimal: number }> =
+    new Map<string, { denom: Denom, symbol: string, decimal: number }>();
+
+  static {
+    coinsJson.forEach((c) => KujiraService.denomSymbolMap.set(c.denom, c))
+  }
 
   private CHAT_ID: string = process.env.TELEGRAM_CHAT_ID;
 
@@ -41,7 +56,8 @@ export class KujiraService {
   }
 
   startMarketMakings() {
-    (async () => await Promise.all(this._tradings.map(trading => this.startMarketMaking(trading))))();
+    const tradings = Array.from(this.wallets.values()).flat();
+    (async () => await Promise.all(Array.from(tradings).map(trading => this.startMarketMaking(trading))))();
   }
 
   private async startMarketMaking(trading: Trading) {
@@ -72,33 +88,9 @@ export class KujiraService {
     this.telegram.sendMessage({ chat_id: this.CHAT_ID, text: message }).subscribe()
   }
 
-  addTrading(trading: Trading) {
-    this._tradings.push(trading);
-  }
-
-  toSymbol(denom: Denom) {
-    switch (denom) {
-      case 'ukuji':
-        return 'KUJI';
-      case 'factory/kujira1ltvwg69sw3c5z99c6rr08hal7v0kdzfxz07yj5/demo':
-        return 'DEMO';
-      case 'ibc/295548A78785A1007F232DE286149A6FF512F180AF5657780FC89C009E2C348F':
-        return 'axlUSDC';
-      case 'ibc/1B38805B1C75352B28169284F96DF56BDEBD9E8FAC005BDCC8CF0378C82AA8E7':
-        return 'wETH';
-      case 'ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2':
-        return 'ATOM';
-      case 'ibc/47BD209179859CDE4A2806763D7189B6E6FE13A17880FE2B42DE1E6C1E329E23':
-        return 'OSMO';
-      case 'ibc/EFF323CC632EC4F747C61BCE238A758EFDB7699C3226565F7C20DA06509D59A5':
-        return 'JUNO';
-      case 'ibc/F3AA7EF362EC5E791FE78A0F4CCC69FEE1F9A7485EB1A8CAB3F6601C00522F10':
-        return 'EVMOS';
-      case 'ibc/A358D7F19237777AF6D8AD0E0F53268F8B18AE8A53ED318095C14D6D7F3B2DB5':
-        return 'SCRT';
-      default:
-        return denom;
-    }
+  addTrading(wallet: Wallet, trading: Trading) {
+    if (!this.wallets.has(wallet)) throw new Error('wallet not found in map');
+    this.wallets.get(wallet).push(trading);
   }
 
   getContract(contractAddress: string): Contract {
@@ -109,8 +101,18 @@ export class KujiraService {
     return contract;
   }
 
+  async fetchAllBalances(wallet: Wallet): Promise<Balance[]> {
+    return this.client.getBalances(wallet);
+  }
+
   async fetchBalances(wallet: Wallet, contract: Contract): Promise<TradingBalance> {
-    const balances = await this.client.getBalances(wallet, contract);
+    const balances = (await this.client.getBalances(wallet))
+      .map((coin: Coin) => ({
+        amount: `${
+          +coin.amount / 10 ** (6 + (contract.decimal_delta || 0))
+        }`,
+        denom: coin.denom as Denom,
+      }));
     const base = balances.filter((b) => b.denom === contract.denoms.base)[0];
     const quote = balances.filter((b) => b.denom === contract.denoms.quote)[0];
     if (!base) {
@@ -121,9 +123,7 @@ export class KujiraService {
       const message = `invalid quote balance: ${contract.denoms.quote}`;
       throw new Error(message);
     }
-    const baseSymbol = this.toSymbol(base.denom);
-    const quoteSymbol = this.toSymbol(quote.denom);
-    return new TradingBalance(base, quote, baseSymbol, quoteSymbol);
+    return new TradingBalance(base, quote);
   }
 
   async fetchOrders(trading: Trading): Promise<TradingOrders> {
@@ -172,58 +172,70 @@ export class KujiraService {
       });
   }
 
-  private toTradingDto(trading: Trading, price?: number): TradingDto {
-
-    return {
-      uuid: trading.uuid,
-      state: trading.state,
-      balance: trading.balance,
-      balanceRate: price ? trading.balance.calculateRate(price) : undefined,
-      wallet: {
-        account: {
-          address: trading.wallet.account.address,
-        }
-      },
-      contract: trading.contract,
-      deltaRates: trading.deltaRates,
-      targetRate: trading.targetRate,
-      orderAmountMin: trading.orderAmountMin,
-    };
-  }
-
   getTradings(): TradingDto[] {
-    return this._tradings.map(this.toTradingDto)
+    const tradings = Array.from(this.wallets.values()).flat();
+    return tradings.map(t => new TradingDto(t))
   }
+
   async getTrading(id: string): Promise<TradingDto> {
-    const trading = this._tradings
+    const tradings = Array.from(this.wallets.values()).flat();
+    const trading = tradings
       .filter(t => t.uuid === id)[0]
     if (!trading) throw new Error();
-    return this.fetchBalances(trading.wallet, trading.contract)
-      .then(async res => {
-        const price = await this.client.getMarketPrice(trading.wallet, trading.contract);
-        trading.balance = res;
-        return this.toTradingDto(trading, price);
-      });
+    return new TradingDto(trading);
   }
 
-  modifyTrading(body: TradingDto) {
-    const trading = this._tradings.filter(t => t.uuid === body.uuid)[0];
-    if (!trading) throw new Error(body.uuid);
+  modifyTrading(uuid: string, body: TradingAddDto) {
+    const tradings = Array.from(this.wallets.values()).flat();
+    const trading = tradings.filter(t => t.uuid === uuid)[0];
+    if (!trading) {
+      this.logger.error(`trading[${uuid}] is not exists.`)
+      throw new Error(uuid);
+    }
     trading.deltaRates = body.deltaRates
     trading.orderAmountMin = body.orderAmountMin;
     trading.targetRate = body.targetRate;
-    return this.toTradingDto(trading);
+    return new TradingDto(trading);
   }
 
   stopTrading(id: string) {
-    const trading = this._tradings.filter(t => t.uuid === id)[0];
+    const tradings = Array.from(this.wallets.values()).flat();
+    const trading = tradings.filter(t => t.uuid === id)[0];
     if (!trading) throw new Error(id);
-    trading.state = TradingState.STOP;
+    trading.state = TradingState.CLOSE_FOR_STOP;
   }
 
   resumeTrading(id: string) {
-    const trading = this._tradings.filter(t => t.uuid === id)[0];
+    const tradings = Array.from(this.wallets.values()).flat();
+    const trading = tradings.filter(t => t.uuid === id)[0];
     if (!trading) throw new Error(id);
     trading.state = TradingState.INITIALIZE;
+  }
+
+  getWallets(): WalletDto[] {
+    const wallets: Wallet[] = Array.from(this.wallets.keys());
+    return wallets.map(w => new WalletDto(w));
+  }
+
+  addWallet(wallet: Wallet) {
+    this.wallets.set(wallet, []);
+  }
+
+  getWallet(accountAddress: string) {
+    const wallets: Wallet[] = Array.from(this.wallets.keys());
+    const wallet = wallets.filter(w => w.account.address === accountAddress)[0];
+    if (!wallet) {
+      const message = 'wallet not exists';
+      this.logger.error(message);
+      throw new Error(message);
+    }
+    return wallet;
+  }
+
+  getSymbol(contract: Contract): string[] {
+    return [
+      KujiraService.denomSymbolMap.get(contract.denoms.base).symbol,
+      KujiraService.denomSymbolMap.get(contract.denoms.quote).symbol,
+    ]
   }
 }

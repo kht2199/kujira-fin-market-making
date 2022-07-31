@@ -1,6 +1,8 @@
 import { v4 as uuid } from "uuid";
 import { TradingBalance } from "./trading-balance";
 import { TradingState } from "./trading-state";
+import { Contract } from "./contract";
+import { Wallet } from "./wallet";
 
 export class Trading {
 
@@ -19,14 +21,13 @@ export class Trading {
   lastMarketPrice: number;
 
   constructor(
-    private readonly _baseSymbol: string,
-    private readonly _quoteSymbol: string,
     private _wallet: Wallet,
     private _contract: Contract,
     private _deltaRates: number[],
     private _targetRate: number,
     private _orderAmountMin: number,
   ) {
+    this.state = TradingState.STOP;
     this.uuid = uuid().slice(0, 6);
     this._targetRate = _targetRate;
   }
@@ -75,14 +76,6 @@ export class Trading {
 
   set orderAmountMin(value: number) {
     this._orderAmountMin = value;
-  }
-
-  get baseSymbol(): string {
-    return this._baseSymbol;
-  }
-
-  get quoteSymbol(): string {
-    return this._quoteSymbol;
   }
 
   get balance(): TradingBalance {

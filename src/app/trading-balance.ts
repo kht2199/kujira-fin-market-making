@@ -6,8 +6,7 @@ export class TradingBalance {
   public readonly quoteAmount: number;
 
   constructor(
-    public base: Balance, public quote: Balance,
-    public baseSymbol: string, public quoteSymbol: string
+    public base: Balance, public quote: Balance
   ) {
     this.baseAmount = Number(this.base.amount);
     this.quoteAmount = Number(this.quote.amount);

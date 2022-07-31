@@ -7,6 +7,8 @@ import { HttpModule } from "@nestjs/axios";
 import { KujiraService } from "./kujira/kujira.service";
 import { TelegramModule } from "nestjs-telegram";
 import { KujiraClientService } from "./kujira/kujira-client-service";
+import { TradingsController } from "./tradings.controller";
+import { WalletsController } from "./wallets.controller";
 
 @Module({
   imports: [
@@ -19,7 +21,7 @@ import { KujiraClientService } from "./kujira/kujira-client-service";
       botKey: process.env.TELEGRAM_BOT
     }),
   ],
-  controllers: [AppController],
+  controllers: [AppController, TradingsController, WalletsController],
   providers: [TasksService, KujiraService, KujiraClientService],
 })
 export class AppModule {}
