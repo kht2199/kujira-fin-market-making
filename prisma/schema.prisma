@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Wallet {
+  address String    @id
+  Trading Trading[]
+}
+
+model Trading {
+  uuid           String @id
+  deltaRates     String
+  targetRate     Float
+  orderAmountMin Float
+  contract       String
+  wallet         Wallet @relation(fields: [walletId], references: [address], onDelete: Cascade)
+  walletId       String
+}

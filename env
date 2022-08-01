@@ -1,3 +1,4 @@
+DATABASE_URL=file:./data.db
 VERSION=1.1.0
 PROFILE=production
 INTERVAL=10000

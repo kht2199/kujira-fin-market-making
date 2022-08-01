@@ -1,6 +1,6 @@
 // noinspection JSUnusedGlobalSymbols
 
-import { HttpStatus, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { HttpService } from "@nestjs/axios";
 import { Trading } from "../app/trading";
 import { TelegramService } from "nestjs-telegram";
@@ -16,9 +16,9 @@ import { Wallet } from "../app/wallet";
 import { TradingDto } from "../dto/trading.dto";
 import { WalletDto } from "../dto/wallet.dto";
 import { Coin } from "@cosmjs/stargate";
-import coinsJson from '../../denoms.json'
+import coinsJson from "../../denoms.json";
 import { TradingAddDto } from "../dto/trading-add.dto";
-import { ResponseDto } from "../dto/response.dto";
+import { DatabaseService } from "../db/database.service";
 
 @Injectable()
 export class KujiraService {
@@ -42,6 +42,7 @@ export class KujiraService {
     private readonly httpService: HttpService,
     private readonly telegram: TelegramService,
     private readonly client: KujiraClientService,
+    private readonly databaseService: DatabaseService,
   ) {}
 
   async connect(endpoint: string, mnemonic: string): Promise<Wallet> {
@@ -93,6 +94,7 @@ export class KujiraService {
     const [base, quote] = this.getSymbol(trading.contract);
     this.sendMessage(`[trading] Market [${base}/${quote}] added to account[${wallet.account.address}]\n${trading.toString()}`);
     this.wallets.get(wallet).push(trading);
+    this.databaseService.addTrading(trading);
   }
 
   getContract(contractAddress: string): Contract {
@@ -233,8 +235,18 @@ export class KujiraService {
     return wallets.map(w => new WalletDto(w));
   }
 
-  addWallet(wallet: Wallet) {
-    this.wallets.set(wallet, []);
+  async addWallets(wallets: Wallet[]) {
+    await this.databaseService.deleteWalletsNotIn(wallets.map(w => w.account.address));
+    await this.databaseService.addWallets(wallets);
+    wallets.map(wallet => {
+      const arr = [];
+      this.wallets.set(wallet, arr);
+      this.databaseService.getTradings(wallet)
+        .then(tradings =>
+          tradings.map(t => new Trading(wallet, this.getContract(t.contract), t.deltaRates.split(',').map(d => +d), t.targetRate, t.orderAmountMin))
+            .forEach(t => arr.push(t))
+        )
+    });
   }
 
   getWallet(accountAddress: string) {

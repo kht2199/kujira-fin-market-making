@@ -9,6 +9,7 @@ import { TelegramModule } from "nestjs-telegram";
 import { KujiraClientService } from "./kujira/kujira-client-service";
 import { TradingsController } from "./tradings.controller";
 import { WalletsController } from "./wallets.controller";
+import { DatabaseService } from "./db/database.service";
 
 @Module({
   imports: [
@@ -22,6 +23,6 @@ import { WalletsController } from "./wallets.controller";
     }),
   ],
   controllers: [AppController, TradingsController, WalletsController],
-  providers: [TasksService, KujiraService, KujiraClientService],
+  providers: [TasksService, KujiraService, KujiraClientService, DatabaseService],
 })
 export class AppModule {}

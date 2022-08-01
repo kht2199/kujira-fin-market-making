@@ -8,8 +8,8 @@ export class TasksService {
 
   constructor(
     private readonly telegram: TelegramService,
-    private schedulerRegistry: SchedulerRegistry,
-    private kujiraService: KujiraService
+    private readonly schedulerRegistry: SchedulerRegistry,
+    private readonly kujiraService: KujiraService
   ) {
     const interval = +process.env.INTERVAL || 10000;
     if (interval < 10000) throw new Error(`INTERVAL is too short. ${interval}`);
@@ -17,10 +17,11 @@ export class TasksService {
     if (!endpoint) throw new Error('ENDPOINT not exists');
     const mnemonics = process.env.MNEMONIC
     if (!mnemonics) throw new Error('MNEMONIC not exists');
-    mnemonics.split(',')
-      .forEach(m => kujiraService.connect(endpoint, m)
-        .then(res => kujiraService.addWallet(res))
-      );
+    Promise.all(
+      mnemonics.split(',')
+        .map(m => kujiraService.connect(endpoint, m))
+    )
+      .then(wallets => kujiraService.addWallets(wallets));
     if (process.env.SCHEDULE === 'false') return;
     this.addNewInterval(
       'Market Making',

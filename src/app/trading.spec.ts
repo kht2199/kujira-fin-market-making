@@ -53,4 +53,13 @@ describe("Trading.ts", () => {
       console.log(orders);
     });
   });
+
+  describe("지정가를 통해 비율 조회", () => {
+    const price = 23.33;
+    const base = 5;
+    const quote = 100;
+    const baseValue = price * base;
+    const totalValue = baseValue + quote;
+    console.log(baseValue / totalValue);
+  })
 });
