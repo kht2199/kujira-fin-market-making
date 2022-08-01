@@ -30,8 +30,8 @@ yarn install
 ...
 # start application.
 yarn start
-# or start application with pm2.
-pm2 start 'yarn start' --name kuji-market-making-bot
+# or start application with pm2 using `echosystem.config.js`
+pm2 start
 # you can see log lines.
 pm2 log
 ```
@@ -42,41 +42,43 @@ You can change the settings through the website below.
 if your server use `http` protocol, use this link [http://fin.taek.kim](http://fin.taek.kim)
 ```bash
 $ vi env
+DATABASE_URL=data.db
 VERSION=1.1.0
-INTERVAL=10000
 # comma separated value. e.g. "keyword1 keyword2, keyword3 keyword4..."
 MNEMONIC=""
 CHAIN_ID=kaiyo-1
 ENDPOINT=https://rpc.kaiyo.kujira.setten.io
 ENDPOINT_LCD=https://lcd.kaiyo.kujira.setten.io
-TARGET_RATE=
+INTERVAL=10000
 TELEGRAM_BOT=
 TELEGRAM_CHAT_ID=
 ```
 
 ## What is each value means?
-| name              | description                                                                                                                                             | should modify? |
-|-------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|----------------|
-| *MNEMONIC         | The key value of the wallet. It can be obtained when creating a wallet. If exposed, you may lose ownership of your wallet, so be careful.               | Y              |
-| VERSION           | To check whether the versions match between the UI and the site                                                                                         | N              |
-| CHAIN_ID          | Testnet or Mainnet ID                                                                                                                                   | N              |
-| ENDPOINT          | RPC server address                                                                                                                                      | N              |
-| ENDPOINT_LCD      | LCD server address                                                                                                                                      | N              |
-| INTERVAL          | An application has one state value. According to the scheduling, the code according to the state is executed, and it is an interval for the schedule.   | N              |
-| TELEGRAM_BOT      | Telegram bot ID to send transaction details                                                                                                             | N              |
-| TELEGRAM_CHAT_ID  | Telegram chat ID to receive transaction details                                                                                                         | N              |
+| name             | description                                                                                                                                           |
+|------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| *MNEMONIC        | The key value of the wallet. It can be obtained when creating a wallet. If exposed, you may lose ownership of your wallet, so be careful.             |
+| DATABASE_URL     | sqlite file path. database persist wallet data only address.                                                                                          |
+| VERSION          | To check whether the versions match between the UI and the site                                                                                       |
+| CHAIN_ID         | Testnet or Mainnet ID                                                                                                                                 |
+| ENDPOINT         | RPC server address                                                                                                                                    |
+| ENDPOINT_LCD     | LCD server address                                                                                                                                    |
+| INTERVAL         | An application has one state value. According to the scheduling, the code according to the state is executed, and it is an interval for the schedule. |
+| TELEGRAM_BOT     | Telegram bot ID to send transaction details                                                                                                           |
+| TELEGRAM_CHAT_ID | Telegram chat ID to receive transaction details                                                                                                       |
 
-# Everyone has a plan. Of course, I am too
+# Plan
 - ✅ KUJI/axlUSDC
 - ✅ Webpage
   - ✅ Configuration
 - ✅ Support multiple wallet
-- Websocket Support for Performance
-- wETH/axlUSDC
 - Use Database for all data
+  - ✅ Save Wallet, Trading data on restart server.
   - Statistics
     - daily/monthly valuation change
-- Create apis for data
+- Support multiple strategy
+- Websocket Support for Performance
+- wETH/axlUSDC
 - UI for statistics
 - Support combine with CEX
 - Client Application. 
