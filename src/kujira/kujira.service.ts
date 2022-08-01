@@ -205,7 +205,7 @@ export class KujiraService {
       messages.push(`minimum amount: ${trading.orderAmountMin} to ${body.orderAmountMin}`);
     }
     if (trading.targetRate !== body.targetRate) {
-      messages.push(`minimum amount: ${trading.targetRate} to ${body.targetRate}`);
+      messages.push(`target rate: ${trading.targetRate} to ${body.targetRate}`);
     }
     trading.deltaRates = body.deltaRates
     trading.orderAmountMin = body.orderAmountMin;
