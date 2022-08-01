@@ -32,7 +32,6 @@ export class DatabaseService {
   async addWallets(wallets: Wallet[]) {
     wallets.map(async (wallet) => {
       const w = await this.getWallet(wallet.account.address);
-      console.log(w)
       if (!w) {
         await this.prisma.wallet.create({
           data: {
