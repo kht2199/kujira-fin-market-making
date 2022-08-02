@@ -89,7 +89,9 @@ export class KujiraService {
       return;
     }
     try {
-      this.telegram.sendMessage({ chat_id: this.CHAT_ID, text: message }).subscribe()
+      this.telegram.sendMessage({ chat_id: this.CHAT_ID, text: message }).subscribe({
+        error: e => this.logger.error(JSON.stringify(e))
+      })
     } catch (e) {
       this.logger.error(JSON.stringify(e))
     }
