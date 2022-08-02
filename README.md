@@ -76,7 +76,6 @@ TELEGRAM_CHAT_ID=
 - Use Database for all data
   - ✅ Save Wallet, Trading data on restart server.
   - Statistics
-    - daily/monthly valuation change
 - Support multiple strategy
 - Websocket Support for Performance
 - wETH/axlUSDC

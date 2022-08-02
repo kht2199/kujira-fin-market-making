@@ -1,5 +1,5 @@
 import { Trading } from "./trading";
-import { asc, desc, removeItemsFromIds } from "../util/util";
+import { asc, desc } from "../util/util";
 import { KujiraService } from "../kujira/kujira.service";
 import { KujiraClientService } from "../kujira/kujira-client-service";
 import { Logger } from "@nestjs/common";
@@ -61,7 +61,7 @@ export class TradingStateExecutor {
         const { baseAmount, quoteAmount} = trading.balance;
         const value = trading.balance.calculateValue(marketPrice).toFixed(5);
         balanceRate = trading.balance.calculateRate(marketPrice);
-        message = `[stat] valuation(quote * base / market): ${(baseAmount * quoteAmount / marketPrice).toFixed(5)}\ntotal balance: ${value} ${quoteSymbol}\nmarket price:${marketPrice}\nbalance base: ${baseAmount.toFixed(5)} ${baseSymbol}\nbalance quote: ${quoteAmount.toFixed(5)} ${quoteSymbol}\nbalance rate: ${balanceRate.toFixed(5)}\ntarget rate: ${targetRate.toFixed(5)}`;
+        message = `[stat] total balance: ${value} ${quoteSymbol}\nmarket price:${marketPrice}\nbalance base: ${baseAmount.toFixed(5)} ${baseSymbol}\nbalance quote: ${quoteAmount.toFixed(5)} ${quoteSymbol}\nbalance rate: ${balanceRate.toFixed(5)}\ntarget rate: ${targetRate.toFixed(5)}`;
         kujira.sendMessage(message);
         TradingStateExecutor.logger.debug(message)
         let tps: OrderMarketMaking[] = deltaRates
@@ -105,12 +105,13 @@ export class TradingStateExecutor {
           trading.state = TradingState.ORDER;
           return;
         }
-        const fulfilledOrderIds = currentOrders.fulfilledOrders.map(o => o.idx);
-        if (fulfilledOrderIds.length !== trading.fulfilledOrders.length) {
-          const fulfilledOrdersForMessage = removeItemsFromIds(trading.fulfilledOrders, fulfilledOrderIds);
-          if (fulfilledOrdersForMessage.length > 0) {
-            this.logger.log(JSON.stringify(fulfilledOrdersForMessage));
-            const message = fulfilledOrdersForMessage.map(o => orderToString(o, baseSymbol, quoteSymbol)).join('\n');
+        const fulfilledOrderIds = trading.fulfilledOrders.map(o => o.idx);
+        if (fulfilledOrderIds.length !== currentOrders.fulfilledOrders.length) {
+          const fulfilledOrdersFiltered = currentOrders.fulfilledOrders
+            .filter(a => fulfilledOrderIds.indexOf(a.idx) === -1)
+          if (fulfilledOrdersFiltered.length > 0) {
+            this.logger.log(JSON.stringify(fulfilledOrdersFiltered));
+            const message = fulfilledOrdersFiltered.map(o => orderToString(o, baseSymbol, quoteSymbol)).join('\n');
             kujira.sendMessage(`[orders] filled: ${message}`);
           }
           trading.fulfilledOrders = currentOrders.fulfilledOrders;
@@ -123,12 +124,12 @@ export class TradingStateExecutor {
         if (currentOrders.isRemainsOneSide) {
           const percent = currentOrders.calculateMinimumPriceGapPercentOfUnfilled(marketPrice);
           if (percent > 0.03) {
-            TradingStateExecutor.logger.warn(`[order state] market price: ${marketPrice} percent: ${percent}`);
+            TradingStateExecutor.logger.warn(`[order] market price: ${marketPrice} percent: ${percent}`);
             trading.state = TradingState.ORDER_EMPTY_SIDE_WITH_GAP;
             return;
           }
         }
-        TradingStateExecutor.logger.log(`[order state] idxs: ${currentOrders.orderIds.join(',')} fulfilled: ${currentOrders.lengthFulfilled}`)
+        TradingStateExecutor.logger.log(`[order] idxs: ${currentOrders.orderIds.join(',')} fulfilled: ${currentOrders.lengthFulfilled}`)
         return;
       case TradingState.ORDER_EMPTY_SIDE_WITH_GAP:
       case TradingState.CLOSE_FOR_STOP:
