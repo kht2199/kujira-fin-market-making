@@ -56,6 +56,11 @@ export class TradingStateExecutor {
         trading.state = TradingState.ORDER;
         return;
       case TradingState.ORDER:
+        currentOrders = await kujira.fetchOrders(trading);
+        if (currentOrders.length >= 1) {
+          trading.state = TradingState.CLOSE_ORDERS;
+          return;
+        }
         marketPrice = await client.getMarketPrice(wallet, contract);
         trading.balance = await kujira.fetchBalances(wallet, contract);
         const { baseAmount, quoteAmount} = trading.balance;
