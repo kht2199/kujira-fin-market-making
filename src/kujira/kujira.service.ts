@@ -88,7 +88,11 @@ export class KujiraService {
     if (!this.CHAT_ID) {
       return;
     }
-    this.telegram.sendMessage({ chat_id: this.CHAT_ID, text: message }).subscribe()
+    try {
+      this.telegram.sendMessage({ chat_id: this.CHAT_ID, text: message }).subscribe()
+    } catch (e) {
+      this.logger.error(JSON.stringify(e))
+    }
   }
 
   async addTrading(wallet: Wallet, trading: Trading) {
