@@ -111,7 +111,9 @@ export class TradingStateExecutor {
             .filter(a => fulfilledOrderIds.indexOf(a.idx) === -1)
           if (fulfilledOrdersFiltered.length > 0) {
             this.logger.log(JSON.stringify(fulfilledOrdersFiltered));
-            const message = fulfilledOrdersFiltered.map(o => orderToString(o, baseSymbol, quoteSymbol)).join('\n');
+            const message = fulfilledOrdersFiltered
+              .sort((o1, o2) => desc(+o1.quote_price, +o2.quote_price))
+              .map(o => orderToString(o, baseSymbol, quoteSymbol)).join('\n');
             kujira.sendMessage(`[orders] filled\n${message}`);
           }
           trading.fulfilledOrders = currentOrders.fulfilledOrders;
