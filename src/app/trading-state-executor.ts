@@ -12,7 +12,7 @@ const orderRequestToString = (o: OrderRequest, baseSymbol: string, quoteSymbol, 
 }
 
 const orderToString = (o: Order, baseSymbol: string, quoteSymbol: string) => {
-  return `${o.side} ${o.filled_amount} ${o.side === 'Sell' ? quoteSymbol : baseSymbol} at ${o.quote_price} ${quoteSymbol}`
+  return `${o.side} ${o.original_offer_amount} ${o.side === 'Sell' ? quoteSymbol : baseSymbol} at ${o.quote_price} ${quoteSymbol}`
 }
 
 export class TradingStateExecutor {
