@@ -6,7 +6,7 @@ import { Wallet } from "./wallet";
 
 export class Trading {
 
-  readonly uuid: string;
+  uuid: string;
 
   private _state: TradingState = TradingState.INITIALIZE;
 

@@ -18,7 +18,8 @@ import { WalletDto } from "../dto/wallet.dto";
 import { Coin } from "@cosmjs/stargate";
 import coinsJson from "../../denoms.json";
 import { TradingAddDto } from "../dto/trading-add.dto";
-import { DatabaseService } from "../db/database.service";
+import { WalletService } from "../service/wallet.service";
+import { TradingService } from "../service/trading.service";
 
 @Injectable()
 export class KujiraService {
@@ -42,7 +43,8 @@ export class KujiraService {
     private readonly httpService: HttpService,
     private readonly telegram: TelegramService,
     private readonly client: KujiraClientService,
-    private readonly databaseService: DatabaseService,
+    private readonly walletService: WalletService,
+    private readonly tradingService: TradingService,
   ) {}
 
   async connect(endpoint: string, mnemonic: string): Promise<Wallet> {
@@ -89,12 +91,12 @@ export class KujiraService {
     this.telegram.sendMessage({ chat_id: this.CHAT_ID, text: message }).subscribe()
   }
 
-  addTrading(wallet: Wallet, trading: Trading) {
+  async addTrading(wallet: Wallet, trading: Trading) {
     if (!this.wallets.has(wallet)) throw new Error('wallet not found in map');
     const [base, quote] = this.getSymbol(trading.contract);
     this.sendMessage(`[trading] Market [${base}/${quote}] added to account[${wallet.account.address}]\n${trading.toString()}`);
     this.wallets.get(wallet).push(trading);
-    this.databaseService.addTrading(trading);
+    await this.tradingService.addTrading(trading);
   }
 
   getContract(contractAddress: string): Contract {
@@ -189,7 +191,7 @@ export class KujiraService {
     return new TradingDto(trading);
   }
 
-  modifyTrading(uuid: string, body: TradingAddDto) {
+  async modifyTrading(uuid: string, body: TradingAddDto) {
     const tradings = Array.from(this.wallets.values()).flat();
     const trading = tradings.filter(t => t.uuid === uuid)[0];
     if (!trading) {
@@ -210,6 +212,7 @@ export class KujiraService {
     trading.deltaRates = body.deltaRates
     trading.orderAmountMin = body.orderAmountMin;
     trading.targetRate = body.targetRate;
+    await this.tradingService.updateTrading(trading);
     if (messages.length > 0) {
       this.sendMessage(`[config] changed\n${messages.join('\n')}`);
     }
@@ -236,14 +239,18 @@ export class KujiraService {
   }
 
   async addWallets(wallets: Wallet[]) {
-    await this.databaseService.deleteWalletsNotIn(wallets.map(w => w.account.address));
-    await this.databaseService.addWallets(wallets);
+    await this.walletService.deleteWalletsNotIn(wallets.map(w => w.account.address));
+    await this.walletService.addWallets(wallets);
     wallets.map(wallet => {
-      const arr = [];
+      const arr: Trading[] = [];
       this.wallets.set(wallet, arr);
-      this.databaseService.getTradings(wallet)
-        .then(tradings =>
-          tradings.map(t => new Trading(wallet, this.getContract(t.contract), t.deltaRates.split(',').map(d => +d), t.targetRate, t.orderAmountMin))
+      this.tradingService.getTradings(wallet)
+        .then((tradings) =>
+          tradings.map(t => {
+            const trading = new Trading(wallet, this.getContract(t.contract), t.deltaRates.split(',').map(d => +d), t.targetRate, t.orderAmountMin)
+            trading.uuid = t.uuid;
+            return trading;
+          })
             .forEach(t => arr.push(t))
         )
     });

@@ -35,8 +35,8 @@ export class TradingsController {
 
   @Post('/tradings/:id')
   postTrading(@Param('id') id: string, @Body() body: TradingAddDto, @Res() res: Response) {
-    this.kujiraService.modifyTrading(id, body);
-    res.status(HttpStatus.OK).json(ResponseDto.OK);
+    this.kujiraService.modifyTrading(id, body)
+      .then(() => res.status(HttpStatus.OK).json(ResponseDto.OK));
   }
 
   @Put('/tradings')
