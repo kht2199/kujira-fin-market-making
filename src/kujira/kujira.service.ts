@@ -59,7 +59,7 @@ export class KujiraService {
     if (trading.ongoing || trading.state === TradingState.STOP) return;
     trading.ongoing = true;
     const beforeState = trading.state;
-    this.logger.log(`[start] ${trading.uuid} ${beforeState}`)
+    this.logger.log(`[start] ${trading.uuid} ${trading.contract.market} ${beforeState}`)
     try {
       await TradingStateExecutor.next(trading, this);
       trading.ongoing = false;
@@ -71,7 +71,7 @@ export class KujiraService {
       }
     } finally {
       const afterState = trading.state;
-      this.logger.log(`[end] ${trading.uuid} ${beforeState} ${beforeState !== afterState ? `=> ${afterState}` : ''}`)
+      this.logger.log(`[end] ${trading.uuid} ${trading.contract.market} ${beforeState} ${beforeState !== afterState ? `=> ${afterState}` : ''}`)
       trading.ongoing = false;
     }
   }
