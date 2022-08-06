@@ -117,8 +117,8 @@ export class Trading {
   }
 
   toStringStat(marketPrice: number) {
-    const {baseAmount, quoteAmount, calculateRate} = this.balance;
-    const balanceRate = calculateRate(marketPrice);
+    const {baseAmount, quoteAmount} = this.balance;
+    const balanceRate = this.balance.calculateRate(marketPrice);
     const value = balanceRate.toFixed(5);
     const [b, q] = this.contract.symbols;
     return `[stat] total balance: ${value} ${q}
