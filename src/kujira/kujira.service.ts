@@ -170,8 +170,8 @@ export class KujiraService {
   }
 
   async modifyTrading(uuid: string, body: TradingAddDto) {
-    const tradings = Array.from(this.wallets.values()).flat();
-    const trading = tradings.filter(t => t.uuid === uuid)[0];
+    const tradings: Trading[] = Array.from(this.wallets.values()).flat();
+    const trading: Trading = tradings.filter(t => t.uuid === uuid)[0];
     if (!trading) {
       this.logger.error(`trading[${uuid}] is not exists.`)
       throw new Error(uuid);
@@ -192,7 +192,7 @@ export class KujiraService {
     trading.targetRate = body.targetRate;
     await this.tradingService.updateTrading(trading);
     if (messages.length > 0) {
-      this.sendMessage(`[config] changed\n${messages.join('\n')}`);
+      this.sendMessage(`[config] changed ${trading.contract.market}\n${messages.join('\n')}`);
     }
     return new TradingDto(trading);
   }

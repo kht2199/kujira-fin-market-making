@@ -37,6 +37,10 @@ export class Contract {
     return [this.baseSymbol, this.quoteSymbol];
   }
 
+  get market() {
+    return `${this.baseSymbol}/${this.quoteSymbol}`;
+  }
+
   static getSymbol(contract: Contract): string[] {
     return [
       Contract.denomSymbolMap.get(contract.denoms.base).symbol,
