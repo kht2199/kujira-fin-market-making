@@ -19,22 +19,6 @@ declare global {
     base: Denom;
     quote: Denom;
   }
-
-  interface OrderRequest {
-    uuid: string;
-    contract: Contract;
-    side: OrderSide;
-    price: number;
-    amount: number;
-  }
-
-  interface OrderMarketMaking {
-    price: number;
-    base: number;
-    dq: number;
-    side: OrderSide;
-    normal: boolean;
-  }
 }
 
 export {};

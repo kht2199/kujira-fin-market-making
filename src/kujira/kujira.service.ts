@@ -1,5 +1,3 @@
-// noinspection JSUnusedGlobalSymbols
-
 import { Injectable, Logger } from "@nestjs/common";
 import { HttpService } from "@nestjs/axios";
 import { Trading } from "../app/trading";
@@ -7,7 +5,6 @@ import { TelegramService } from "nestjs-telegram";
 import data from "../../contracts.json";
 import { KujiraClientService } from "./kujira-client-service";
 import { TradingStateExecutor } from "../app/trading-state-executor";
-import { v4 as uuid } from "uuid";
 import { TradingBalance } from "../app/trading-balance";
 import { TradingOrders } from "../app/trading-orders";
 import { TradingState } from "../app/trading-state";
@@ -16,10 +13,11 @@ import { Wallet } from "../app/wallet";
 import { TradingDto } from "../dto/trading.dto";
 import { WalletDto } from "../dto/wallet.dto";
 import { Coin } from "@cosmjs/stargate";
-import coinsJson from "../../denoms.json";
 import { TradingAddDto } from "../dto/trading-add.dto";
 import { WalletService } from "../service/wallet.service";
 import { TradingService } from "../service/trading.service";
+import { OrderRequest } from "../app/order-request";
+import { OrderRequestDelta } from "../app/order-request-delta";
 
 @Injectable()
 export class KujiraService {
@@ -29,13 +27,6 @@ export class KujiraService {
   private wallets: Map<Wallet, Trading[]> = new Map<Wallet, Trading[]>();
 
   private contracts: Contract[] = data.map(d => new Contract(d)) as Contract[];
-
-  public static readonly denomSymbolMap: Map<string, { denom: Denom, symbol: string, decimal: number }> =
-    new Map<string, { denom: Denom, symbol: string, decimal: number }>();
-
-  static {
-    coinsJson.forEach((c) => KujiraService.denomSymbolMap.set(c.denom, c))
-  }
 
   private CHAT_ID: string = process.env.TELEGRAM_CHAT_ID;
 
@@ -54,6 +45,7 @@ export class KujiraService {
     return await this.client.sign(endpoint, mnemonic);
   }
 
+  // noinspection JSUnusedGlobalSymbols
   async reconnect(wallet: Wallet) {
     return await this.client.sign(wallet.endpoint, wallet.mnemonic);
   }
@@ -69,7 +61,7 @@ export class KujiraService {
     const beforeState = trading.state;
     this.logger.log(`[start] ${trading.uuid} ${beforeState}`)
     try {
-      await TradingStateExecutor.next(trading, this, this.client);
+      await TradingStateExecutor.next(trading, this);
       trading.ongoing = false;
     } catch (e) {
       if (e instanceof Error) {
@@ -88,18 +80,15 @@ export class KujiraService {
     if (!this.CHAT_ID) {
       return;
     }
-    try {
-      this.telegram.sendMessage({ chat_id: this.CHAT_ID, text: message }).subscribe({
-        error: e => this.logger.error(JSON.stringify(e))
-      })
-    } catch (e) {
-      this.logger.error(JSON.stringify(e))
-    }
+    this.logger.debug(message);
+    this.telegram.sendMessage({ chat_id: this.CHAT_ID, text: message }).subscribe({
+      error: e => this.logger.error(JSON.stringify(e))
+    })
   }
 
   async addTrading(wallet: Wallet, trading: Trading) {
     if (!this.wallets.has(wallet)) throw new Error('wallet not found in map');
-    const [base, quote] = this.getSymbol(trading.contract);
+    const [base, quote] = trading.contract.symbols;
     this.sendMessage(`[trading] Market [${base}/${quote}] added to account[${wallet.account.address}]\n${trading.toString()}`);
     this.wallets.get(wallet).push(trading);
     await this.tradingService.addTrading(trading);
@@ -143,44 +132,27 @@ export class KujiraService {
     return new TradingOrders(await this.client.getOrders(wallet, contract))
   }
 
-  public toOrderMarketMaking(rate: number, marketPrice: number, baseQuantity: number, quoteQuantity: number, targetRate: number): OrderMarketMaking {
-    // 자산비율이 주문비율{1%,2%}에 해당하는 목표가격을 {tp1, tp2} 찾는다.
-    const price = marketPrice + marketPrice * rate;
-    // 주문비율의 가격에서 변동자산가치를{tot1, tot2} 계산한다.
-    const tot = baseQuantity * price + quoteQuantity;
-    // 변동자산가치에서 목표비율을 곱해 목표가의 갯수를{base}를 계산한다.
-    const base = tot * targetRate / price;
-    // 목표수량과 현재 수량만큼의 차이인 주문수량{dq1, dq2} 계산한다.
-    const dq = base - baseQuantity;
-    // 부호가 다르면, 가격 이격이 발생.
-    const normal = rate * dq < 0;
-    return { price, base, dq, normal, side: dq > 0 ? 'Buy' : 'Sell'};
-  }
-
   /**
    * @param contract
    * @param orders amount should greater than prev item.
    */
-  public toOrderRequests(contract: Contract, orders: OrderMarketMaking[]): OrderRequest[] {
+  public toOrderRequests(contract: Contract, orders: OrderRequestDelta[]): OrderRequest[] {
     let prevQuantity = 0;
     return orders
       .map(o => {
-        const res = {
-          ...o,
-          dq: Math.abs(Math.abs(o.dq) - Math.abs(prevQuantity))
-        };
-        prevQuantity = o.dq;
-        return res;
+        const temp = o.dq;
+        o.dq = Math.abs(Math.abs(o.dq) - Math.abs(prevQuantity));
+        prevQuantity = temp;
+        return o;
       })
       .map(o => {
         const amount = o.side === 'Sell' ? o.dq : (o.dq * o.price);
-        return {
-          uuid: uuid(),
+        return new OrderRequest(
           contract,
-          side: o.side,
-          price: o.price,
-          amount,
-        }
+          o.side,
+          o.price,
+          amount
+        );
       });
   }
 
@@ -273,10 +245,20 @@ export class KujiraService {
     return wallet;
   }
 
-  getSymbol(contract: Contract): string[] {
-    return [
-      KujiraService.denomSymbolMap.get(contract.denoms.base).symbol,
-      KujiraService.denomSymbolMap.get(contract.denoms.quote).symbol,
-    ]
+  async getMarketPrice(wallet: Wallet, contract: Contract) {
+    return this.client.getMarketPrice(wallet, contract);
+  }
+
+  async orders(wallet: Wallet, preparedOrders: OrderRequest[]) {
+    return this.client.orders(wallet, preparedOrders);
+  }
+
+  async ordersWithdraw(wallet: Wallet, contract: Contract, filledOrder: Order[]) {
+    return this.client.ordersWithdraw(wallet, contract, filledOrder);
+
+  }
+
+  async ordersCancel(wallet: Wallet, contract: Contract, unfulfilledOrders: Order[]) {
+    return this.client.ordersCancel(wallet, contract, unfulfilledOrders);
   }
 }

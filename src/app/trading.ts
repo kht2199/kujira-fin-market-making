@@ -3,6 +3,7 @@ import { TradingBalance } from "./trading-balance";
 import { TradingState } from "./trading-state";
 import { Contract } from "./contract";
 import { Wallet } from "./wallet";
+import { OrderRequest } from "./order-request";
 
 export class Trading {
 
@@ -113,5 +114,18 @@ export class Trading {
     messages.push(`target rate: ${this.targetRate}`);
     messages.push(`minimum order: ${this.orderAmountMin}`);
     return messages.join('\n');
+  }
+
+  toStringStat(marketPrice: number) {
+    const {baseAmount, quoteAmount, calculateRate} = this.balance;
+    const balanceRate = calculateRate(marketPrice);
+    const value = balanceRate.toFixed(5);
+    const [b, q] = this.contract.symbols;
+    return `[stat] total balance: ${value} ${q}
+market price:${marketPrice}
+balance base: ${baseAmount.toFixed(5)} ${b}
+balance quote: ${quoteAmount.toFixed(5)} ${q}
+balance rate: ${balanceRate.toFixed(5)}
+target rate: ${this.targetRate.toFixed(5)}`;
   }
 }

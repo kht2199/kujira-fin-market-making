@@ -1,15 +1,10 @@
 import { Trading } from "./trading";
 import { asc, desc } from "../util/util";
 import { KujiraService } from "../kujira/kujira.service";
-import { KujiraClientService } from "../kujira/kujira-client-service";
 import { Logger } from "@nestjs/common";
 import { TradingState } from "./trading-state";
 import { TradingOrders } from "./trading-orders";
-import { Contract } from "./contract";
-
-const orderRequestToString = (o: OrderRequest, baseSymbol: string, quoteSymbol, contract: Contract) => {
-  return `${o.side} ${o.amount.toFixed(4)} ${o.side === 'Sell' ? baseSymbol : quoteSymbol} at ${o.price.toFixed(contract.price_precision.decimal_places)} ${quoteSymbol}`
-}
+import { OrderRequestDelta } from "./order-request-delta";
 
 const orderToString = (o: Order, baseSymbol: string, quoteSymbol: string) => {
   return `${o.side} ${o.original_offer_amount} ${o.side === 'Sell' ? baseSymbol : quoteSymbol} at ${o.quote_price} ${quoteSymbol}`
@@ -18,30 +13,29 @@ const orderToString = (o: Order, baseSymbol: string, quoteSymbol: string) => {
 export class TradingStateExecutor {
   private static readonly logger = new Logger(TradingStateExecutor.name);
 
+  // noinspection JSUnusedLocalSymbols
   private constructor() {}
 
   /**
    * @param trading
    * @param kujira
-   * @param client TODO remove client dependency at TradingState
    */
-  static async next(trading: Trading, kujira: KujiraService, client: KujiraClientService) {
+  static async next(trading: Trading, kujira: KujiraService) {
     const { state, wallet, contract, deltaRates } = trading;
-    const [baseSymbol, quoteSymbol] = kujira.getSymbol(contract);
-    let { targetRate } = trading;
+    const [baseSymbol, quoteSymbol] = contract.symbols;
     let currentOrders: TradingOrders;
     let message: string;
     let marketPrice: number;
     let balanceRate: number;
     switch (state) {
       case TradingState.INITIALIZE:
-        marketPrice = await client.getMarketPrice(wallet, contract);
+        marketPrice = await kujira.getMarketPrice(wallet, contract);
         trading.balance = await kujira.fetchBalances(wallet, contract);
         balanceRate = trading.balance.calculateRate(marketPrice);
-        if (!targetRate) {
-          targetRate = trading.targetRate = balanceRate;
+        if (!trading.targetRate) {
+          trading.targetRate = trading.targetRate = balanceRate;
         }
-        if (Math.abs(balanceRate - targetRate) > Math.max(...deltaRates.map(r => Math.abs(r)))) {
+        if (Math.abs(balanceRate - trading.targetRate) > Math.max(...deltaRates.map(r => Math.abs(r)))) {
           throw new Error(`current wallet ratio [${balanceRate}] must less than config TARGET_RATE`);
         }
         currentOrders = await kujira.fetchOrders(trading);
@@ -61,16 +55,14 @@ export class TradingStateExecutor {
           trading.state = TradingState.CLOSE_ORDERS;
           return;
         }
-        marketPrice = await client.getMarketPrice(wallet, contract);
+        marketPrice = await kujira.getMarketPrice(wallet, contract);
         trading.balance = await kujira.fetchBalances(wallet, contract);
         const { baseAmount, quoteAmount} = trading.balance;
-        const value = trading.balance.calculateValue(marketPrice).toFixed(5);
         balanceRate = trading.balance.calculateRate(marketPrice);
-        message = `[stat] total balance: ${value} ${quoteSymbol}\nmarket price:${marketPrice}\nbalance base: ${baseAmount.toFixed(5)} ${baseSymbol}\nbalance quote: ${quoteAmount.toFixed(5)} ${quoteSymbol}\nbalance rate: ${balanceRate.toFixed(5)}\ntarget rate: ${targetRate.toFixed(5)}`;
+        message = trading.toStringStat(marketPrice)
         kujira.sendMessage(message);
-        TradingStateExecutor.logger.debug(message)
-        let tps: OrderMarketMaking[] = deltaRates
-          .map(r => kujira.toOrderMarketMaking(r, marketPrice, baseAmount, quoteAmount, targetRate))
+        let tps: OrderRequestDelta[] = deltaRates
+          .map(r => new OrderRequestDelta(r, marketPrice, baseAmount, quoteAmount, trading.targetRate))
           .filter(o => Math.abs(o.dq) >= trading.orderAmountMin);
         const notNormal = tps.filter(tp => !tp.normal);
         if (notNormal.length > 0) {
@@ -90,17 +82,16 @@ export class TradingStateExecutor {
         trading.state = TradingState.ORDER_PREPARED;
         return;
       case TradingState.ORDER_PREPARED:
-        TradingStateExecutor.logger.log(`[orders] ${JSON.stringify(trading.preparedOrders)}`);
-        await client.orders(wallet, trading.preparedOrders);
+        await kujira.orders(wallet, trading.preparedOrders);
         message = trading.preparedOrders
           .sort((n1, n2) => desc(n1.price, n2.price))
-          .map(o => orderRequestToString(o, baseSymbol, quoteSymbol, contract))
+          .map(o => o.toString())
           .join('\n');
-        kujira.sendMessage(`[orders] submit\n${message}`);
+        kujira.sendMessage(`[orders] submit ${baseSymbol}/${quoteSymbol}\n${message}`);
         trading.state = TradingState.ORDER_CHECK;
         return;
       case TradingState.ORDER_CHECK:
-        marketPrice = await client.getMarketPrice(wallet, contract);
+        marketPrice = await kujira.getMarketPrice(wallet, contract);
         if (!trading.isChangedPrice(marketPrice)) {
           return;
         }
@@ -118,8 +109,9 @@ export class TradingStateExecutor {
             this.logger.log(JSON.stringify(fulfilledOrdersFiltered));
             const message = fulfilledOrdersFiltered
               .sort((o1, o2) => desc(+o1.quote_price, +o2.quote_price))
-              .map(o => orderToString(o, baseSymbol, quoteSymbol)).join('\n');
-            kujira.sendMessage(`[orders] filled\n${message}`);
+              .map(o => orderToString(o, baseSymbol, quoteSymbol))
+              .join('\n');
+            kujira.sendMessage(`[orders] filled ${baseSymbol}/${quoteSymbol}\n${message}`);
           }
           trading.fulfilledOrders = currentOrders.fulfilledOrders;
         }
@@ -136,7 +128,7 @@ export class TradingStateExecutor {
             return;
           }
         }
-        TradingStateExecutor.logger.log(`[order] idxs: ${currentOrders.orderIds.join(',')} fulfilled: ${currentOrders.lengthFulfilled}`)
+        TradingStateExecutor.logger.log(`[order] idxs ${baseSymbol}/${quoteSymbol}: ${currentOrders.orderIds.join(',')} fulfilled: ${currentOrders.lengthFulfilled}`)
         return;
       case TradingState.ORDER_EMPTY_SIDE_WITH_GAP:
       case TradingState.CLOSE_FOR_STOP:
@@ -144,16 +136,14 @@ export class TradingStateExecutor {
         currentOrders = await kujira.fetchOrders(trading);
         if (currentOrders.lengthFilled > 0) {
           const filledOrder: Order[] = currentOrders.filledOrders;
-          message = `[orders] withdraw: ${filledOrder.map(o => o.idx).join(',')}`;
-          TradingStateExecutor.logger.log(message);
-          await client.ordersWithdraw(wallet, contract, filledOrder);
+          message = `[orders] withdraw ${baseSymbol}/${quoteSymbol}: ${filledOrder.map(o => o.idx).join(',')}`;
+          await kujira.ordersWithdraw(wallet, contract, filledOrder);
           kujira.sendMessage(message);
         }
         if (currentOrders.lengthUnfulfilled > 0) {
           const unfulfilledOrders: Order[] = currentOrders.unfulfilledOrders;
-          message = `[orders] cancel: ${unfulfilledOrders.map(o => o.idx).join(',')}`;
-          TradingStateExecutor.logger.log(message);
-          await client.ordersCancel(wallet, contract, unfulfilledOrders);
+          message = `[orders] cancel ${baseSymbol}/${quoteSymbol}: ${unfulfilledOrders.map(o => o.idx).join(',')}`;
+          await kujira.ordersCancel(wallet, contract, unfulfilledOrders);
           kujira.sendMessage(message);
         }
         if (state === TradingState.CLOSE_FOR_STOP) {

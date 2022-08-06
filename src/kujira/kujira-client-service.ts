@@ -12,6 +12,7 @@ import { Injectable } from "@nestjs/common";
 import { OrderResponse } from "kujira.js/src/fin";
 import { Contract } from "../app/contract";
 import { Wallet } from "../app/wallet";
+import { OrderRequest } from "../app/order-request";
 
 @Injectable()
 export class KujiraClientService {
