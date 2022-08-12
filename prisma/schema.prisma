@@ -26,6 +26,9 @@ model TradingStat {
   id          String   @id
   totalValue  Float
   balanceRate Float
+  baseAmount  Float
+  quoteAmount Float
+  marketPrice Float
   base        String
   quote       String
   createdDt   DateTime

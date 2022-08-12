@@ -262,7 +262,10 @@ export class KujiraService {
       totalValue,
       balanceRate,
       base,
+      baseAmount,
+      quoteAmount,
       quote,
+      marketPrice,
     };
     await this.walletService.addStat(stat);
   }

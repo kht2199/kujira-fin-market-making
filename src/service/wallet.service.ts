@@ -38,14 +38,15 @@ export class WalletService {
     })
   }
 
-  async addStat({totalValue, quote, balanceRate, base}: { totalValue: number; quote: string; balanceRate: number; base: string }) {
+  async addStat({totalValue, quote, balanceRate, base, baseAmount, quoteAmount, marketPrice}) {
     await this.prisma.tradingStat.create({
       data: {
         id: uuid(),
         totalValue,
-        base,
-        quote,
+        base, quote,
         balanceRate,
+        marketPrice,
+        baseAmount, quoteAmount,
         createdDt: new Date()
       }
     })
