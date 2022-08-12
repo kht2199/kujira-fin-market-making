@@ -35,12 +35,13 @@ export class KujiraService {
     private readonly telegram: TelegramService,
     private readonly client: KujiraClientService,
     private readonly walletService: WalletService,
-    private readonly tradingService: TradingService,
-  ) {}
+    private readonly tradingService: TradingService
+  ) {
+  }
 
   async connect(endpoint: string, mnemonic: string): Promise<Wallet> {
     if (!mnemonic) {
-      throw new Error('!mnemonic');
+      throw new Error("!mnemonic");
     }
     return await this.client.sign(endpoint, mnemonic);
   }
@@ -59,7 +60,7 @@ export class KujiraService {
     if (trading.ongoing || trading.state === TradingState.STOP) return;
     trading.ongoing = true;
     const beforeState = trading.state;
-    this.logger.log(`[start] ${trading.uuid} ${trading.contract.market} ${beforeState}`)
+    this.logger.log(`[start] ${trading.uuid} ${trading.contract.market} ${beforeState}`);
     try {
       await TradingStateExecutor.next(trading, this);
       trading.ongoing = false;
@@ -71,7 +72,7 @@ export class KujiraService {
       }
     } finally {
       const afterState = trading.state;
-      this.logger.log(`[end] ${trading.uuid} ${trading.contract.market} ${beforeState} ${beforeState !== afterState ? `=> ${afterState}` : ''}`)
+      this.logger.log(`[end] ${trading.uuid} ${trading.contract.market} ${beforeState} ${beforeState !== afterState ? `=> ${afterState}` : ""}`);
       trading.ongoing = false;
     }
   }
@@ -83,11 +84,11 @@ export class KujiraService {
     this.logger.debug(message);
     this.telegram.sendMessage({ chat_id: this.CHAT_ID, text: message }).subscribe({
       error: e => this.logger.error(JSON.stringify(e))
-    })
+    });
   }
 
   async addTrading(wallet: Wallet, trading: Trading) {
-    if (!this.wallets.has(wallet)) throw new Error('wallet not found in map');
+    if (!this.wallets.has(wallet)) throw new Error("wallet not found in map");
     const [base, quote] = trading.contract.symbols;
     this.sendMessage(`[trading] Market [${base}/${quote}] added to account\n${trading.toString()}`);
     this.wallets.get(wallet).push(trading);
@@ -97,7 +98,7 @@ export class KujiraService {
   getContract(contractAddress: string): Contract {
     const contract = this.contracts.filter(c => c.address === contractAddress)[0];
     if (!contract) {
-      throw new Error('Contract not exists.')
+      throw new Error("Contract not exists.");
     }
     return contract;
   }
@@ -112,7 +113,7 @@ export class KujiraService {
         amount: `${
           +coin.amount / 10 ** (6 + (contract.decimal_delta || 0))
         }`,
-        denom: coin.denom as Denom,
+        denom: coin.denom as Denom
       }));
     const base = balances.filter((b) => b.denom === contract.denoms.base)[0];
     const quote = balances.filter((b) => b.denom === contract.denoms.quote)[0];
@@ -129,7 +130,7 @@ export class KujiraService {
 
   async fetchOrders(trading: Trading): Promise<TradingOrders> {
     const { wallet, contract } = trading;
-    return new TradingOrders(await this.client.getOrders(wallet, contract))
+    return new TradingOrders(await this.client.getOrders(wallet, contract));
   }
 
   /**
@@ -146,7 +147,7 @@ export class KujiraService {
         return o;
       })
       .map(o => {
-        const amount = o.side === 'Sell' ? o.dq : (o.dq * o.price);
+        const amount = o.side === "Sell" ? o.dq : (o.dq * o.price);
         return new OrderRequest(
           contract,
           o.side,
@@ -158,13 +159,13 @@ export class KujiraService {
 
   getTradings(): TradingDto[] {
     const tradings = Array.from(this.wallets.values()).flat();
-    return tradings.map(t => new TradingDto(t))
+    return tradings.map(t => new TradingDto(t));
   }
 
   async getTrading(id: string): Promise<TradingDto> {
     const tradings = Array.from(this.wallets.values()).flat();
     const trading = tradings
-      .filter(t => t.uuid === id)[0]
+      .filter(t => t.uuid === id)[0];
     if (!trading) throw new Error();
     return new TradingDto(trading);
   }
@@ -173,12 +174,12 @@ export class KujiraService {
     const tradings: Trading[] = Array.from(this.wallets.values()).flat();
     const trading: Trading = tradings.filter(t => t.uuid === uuid)[0];
     if (!trading) {
-      this.logger.error(`trading[${uuid}] is not exists.`)
+      this.logger.error(`trading[${uuid}] is not exists.`);
       throw new Error(uuid);
     }
     const messages = [];
     if (trading.deltaRates.length !== body.deltaRates.length
-        || trading.deltaRates.filter(d => body.deltaRates.indexOf(d) === -1).length > 0) {
+      || trading.deltaRates.filter(d => body.deltaRates.indexOf(d) === -1).length > 0) {
       messages.push(`rates: ${trading.deltaRates} to ${body.deltaRates}`);
     }
     if (trading.orderAmountMin !== body.orderAmountMin) {
@@ -187,12 +188,12 @@ export class KujiraService {
     if (trading.targetRate !== body.targetRate) {
       messages.push(`target rate: ${trading.targetRate} to ${body.targetRate}`);
     }
-    trading.deltaRates = body.deltaRates
+    trading.deltaRates = body.deltaRates;
     trading.orderAmountMin = body.orderAmountMin;
     trading.targetRate = body.targetRate;
     await this.tradingService.updateTrading(trading);
     if (messages.length > 0) {
-      this.sendMessage(`[config] changed ${trading.contract.market}\n${messages.join('\n')}`);
+      this.sendMessage(`[config] changed ${trading.contract.market}\n${messages.join("\n")}`);
     }
     return new TradingDto(trading);
   }
@@ -217,20 +218,17 @@ export class KujiraService {
   }
 
   async addWallets(wallets: Wallet[]) {
-    await this.walletService.deleteWalletsNotIn(wallets.map(w => w.account.address));
     await this.walletService.addWallets(wallets);
-    wallets.map(wallet => {
-      const arr: Trading[] = [];
-      this.wallets.set(wallet, arr);
+    wallets.forEach(wallet => {
       this.tradingService.getTradings(wallet)
         .then((tradings) =>
           tradings.map(t => {
-            const trading = new Trading(wallet, this.getContract(t.contract), t.deltaRates.split(',').map(d => +d), t.targetRate, t.orderAmountMin)
+            const trading = new Trading(wallet, this.getContract(t.contract), t.deltaRates.split(",").map(d => +d), t.targetRate, t.orderAmountMin);
             trading.uuid = t.uuid;
             return trading;
           })
-            .forEach(t => arr.push(t))
         )
+        .then(tradings => this.wallets.set(wallet, tradings));
     });
   }
 
@@ -238,11 +236,35 @@ export class KujiraService {
     const wallets: Wallet[] = Array.from(this.wallets.keys());
     const wallet = wallets.filter(w => w.account.address === accountAddress)[0];
     if (!wallet) {
-      const message = 'wallet not exists';
+      const message = "wallet not exists";
       this.logger.error(message);
       throw new Error(message);
     }
     return wallet;
+  }
+
+  async deleteTrading(id: string) {
+    await this.tradingService.deleteTrading(id);
+    this.wallets.forEach((tradings, wallet) => {
+      if (tradings.find(t => t.uuid === id)) {
+        this.wallets.set(wallet, tradings.filter(t => t.uuid !== id))
+      }
+    })
+  }
+
+  async saveStat(trading: Trading, marketPrice: number) {
+    const { balance, contract } = trading;
+    const { baseAmount, quoteAmount } = balance;
+    const totalValue = baseAmount * marketPrice + quoteAmount;
+    const balanceRate = trading.balance.calculateRate(marketPrice);
+    const [base, quote] = contract.symbols;
+    const stat = {
+      totalValue,
+      balanceRate,
+      base,
+      quote,
+    };
+    await this.walletService.addStat(stat);
   }
 
   async getMarketPrice(wallet: Wallet, contract: Contract) {
@@ -255,7 +277,6 @@ export class KujiraService {
 
   async ordersWithdraw(wallet: Wallet, contract: Contract, filledOrder: Order[]) {
     return this.client.ordersWithdraw(wallet, contract, filledOrder);
-
   }
 
   async ordersCancel(wallet: Wallet, contract: Contract, unfulfilledOrders: Order[]) {

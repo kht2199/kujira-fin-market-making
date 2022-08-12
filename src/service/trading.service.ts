@@ -48,4 +48,13 @@ export class TradingService {
       }
     })
   }
+
+  async deleteTrading(id: string) {
+    await this.prisma.trading.delete({
+      where: {
+        uuid: id,
+      },
+    })
+      .catch(console.error);
+  }
 }

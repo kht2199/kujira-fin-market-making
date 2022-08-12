@@ -1,6 +1,7 @@
 import { Wallet } from "../app/wallet";
 import { PrismaService } from "../config/prisma.service";
 import { Injectable } from "@nestjs/common";
+import { v4 as uuid } from "uuid";
 
 @Injectable()
 export class WalletService {
@@ -33,6 +34,19 @@ export class WalletService {
             address: wallet.account.address,
           },
         })
+      }
+    })
+  }
+
+  async addStat({totalValue, quote, balanceRate, base}: { totalValue: number; quote: string; balanceRate: number; base: string }) {
+    await this.prisma.tradingStat.create({
+      data: {
+        id: uuid(),
+        totalValue,
+        base,
+        quote,
+        balanceRate,
+        createdDt: new Date()
       }
     })
   }

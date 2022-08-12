@@ -60,14 +60,15 @@ export class TradingStateExecutor {
         const { baseAmount, quoteAmount} = trading.balance;
         balanceRate = trading.balance.calculateRate(marketPrice);
         message = trading.toStringStat(marketPrice)
+        await kujira.saveStat(trading, marketPrice);
         kujira.sendMessage(message);
         let tps: OrderRequestDelta[] = deltaRates
           .map(r => new OrderRequestDelta(r, marketPrice, baseAmount, quoteAmount, trading.targetRate))
           .filter(o => Math.abs(o.dq) >= trading.orderAmountMin);
         const notNormal = tps.filter(tp => !tp.normal);
         if (notNormal.length > 0) {
-          TradingStateExecutor.logger.warn(`[price] found gap between market price{${marketPrice}} and order price{${notNormal[0].price}}`)
-          TradingStateExecutor.logger.warn(`[orders] prepared: ${JSON.stringify(tps)}`)
+          this.logger.warn(`[price] found gap between market price{${marketPrice}} and order price{${notNormal[0].price}}`)
+          this.logger.warn(`[orders] prepared: ${JSON.stringify(tps)}`)
         }
         const sellOrders = tps.filter(tp => tp.side === 'Sell')
           .sort((n1, n2) => asc(n1.price, n2.price));
@@ -123,12 +124,12 @@ export class TradingStateExecutor {
         if (currentOrders.isRemainsOneSide) {
           const percent = currentOrders.calculateMinimumPriceGapPercentOfUnfilled(marketPrice);
           if (percent > 0.03) {
-            TradingStateExecutor.logger.warn(`[order] market price: ${marketPrice} percent: ${percent}`);
+            this.logger.warn(`[order] market price: ${marketPrice} percent: ${percent}`);
             trading.state = TradingState.ORDER_EMPTY_SIDE_WITH_GAP;
             return;
           }
         }
-        TradingStateExecutor.logger.log(`[order] idxs ${baseSymbol}/${quoteSymbol}: ${currentOrders.orderIds.join(',')} fulfilled: ${currentOrders.lengthFulfilled}`)
+        this.logger.log(`[order] idxs ${baseSymbol}/${quoteSymbol}: ${currentOrders.orderIds.join(',')} fulfilled: ${currentOrders.lengthFulfilled}`)
         return;
       case TradingState.ORDER_EMPTY_SIDE_WITH_GAP:
       case TradingState.CLOSE_FOR_STOP:

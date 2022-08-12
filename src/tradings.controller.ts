@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpStatus, Logger, Param, Post, Put, Res } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpStatus, Logger, Param, Post, Put, Res } from "@nestjs/common";
 import { Response } from "express";
 import { KujiraService } from "./kujira/kujira.service";
 import { Trading } from "./app/trading";
@@ -39,15 +39,22 @@ export class TradingsController {
       .then(() => res.status(HttpStatus.OK).json(ResponseDto.OK));
   }
 
+  @Delete('/tradings/:id')
+  deleteTrading(@Param('id') id: string, @Res() res: Response) {
+    this.kujiraService.deleteTrading(id)
+      .then(() => res.status(HttpStatus.OK).json(ResponseDto.OK))
+  }
+
   @Put('/tradings')
-  putTrading(@Body() body: TradingAddDto, @Res() res: Response) {
+  async putTrading(@Body() body: TradingAddDto, @Res() res: Response) {
     const wallet = this.kujiraService.getWallet(body.account);
     const contract = this.kujiraService.getContract(body.contract);
     if (!wallet || !contract) {
       throw new Error('Wallet or Contract not exists.');
     }
     const trading = new Trading(wallet, contract, body.deltaRates, body.targetRate, body.orderAmountMin);
-    this.kujiraService.addTrading(wallet, trading);
+    await this.kujiraService.addTrading(wallet, trading);
     res.status(HttpStatus.OK).json(ResponseDto.OK);
   }
+
 }

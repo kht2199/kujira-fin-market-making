@@ -12,6 +12,7 @@ import { WalletsController } from "./wallets.controller";
 import { PrismaService } from "./config/prisma.service";
 import { WalletService } from "./service/wallet.service";
 import { TradingService } from "./service/trading.service";
+import { EventEmitterModule } from "@nestjs/event-emitter";
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { TradingService } from "./service/trading.service";
     TelegramModule.forRoot({
       botKey: process.env.TELEGRAM_BOT
     }),
+    EventEmitterModule.forRoot(),
   ],
   controllers: [AppController, TradingsController, WalletsController],
   providers: [

@@ -22,7 +22,6 @@ export class TasksService {
         .map(m => kujiraService.connect(endpoint, m))
     )
       .then(wallets => kujiraService.addWallets(wallets));
-    if (process.env.SCHEDULE === 'false') return;
     this.addNewInterval(
       'Market Making',
       +interval,

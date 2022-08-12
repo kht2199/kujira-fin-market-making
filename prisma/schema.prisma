@@ -18,6 +18,15 @@ model Trading {
   targetRate     Float
   orderAmountMin Float
   contract       String
-  wallet         Wallet @relation(fields: [walletId], references: [address], onDelete: Cascade)
   walletId       String
+  wallet         Wallet @relation(fields: [walletId], references: [address], onDelete: Cascade)
+}
+
+model TradingStat {
+  id          String   @id
+  totalValue  Float
+  balanceRate Float
+  base        String
+  quote       String
+  createdDt   DateTime
 }
