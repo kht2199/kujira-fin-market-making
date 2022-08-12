@@ -136,9 +136,10 @@ export class TradingStateExecutor {
       case TradingState.CLOSE_ORDERS:
         currentOrders = await kujira.fetchOrders(trading);
         if (currentOrders.lengthFilled > 0) {
-          const filledOrder: Order[] = currentOrders.filledOrders;
-          message = `[orders] withdraw ${baseSymbol}/${quoteSymbol}: ${filledOrder.map(o => o.idx).join(',')}`;
-          await kujira.ordersWithdraw(wallet, contract, filledOrder);
+          const filledOrders: Order[] = currentOrders.filledOrders;
+          message = `[orders] withdraw ${baseSymbol}/${quoteSymbol}: ${filledOrders.map(o => o.idx).join(',')}`;
+          await kujira.ordersWithdraw(wallet, contract, filledOrders);
+          await kujira.saveFilledOrders(trading, filledOrders);
           kujira.sendMessage(message);
         }
         if (currentOrders.lengthUnfulfilled > 0) {

@@ -13,13 +13,14 @@ model Wallet {
 }
 
 model Trading {
-  uuid           String @id
+  uuid           String           @id
   deltaRates     String
   targetRate     Float
   orderAmountMin Float
   contract       String
   walletId       String
-  wallet         Wallet @relation(fields: [walletId], references: [address], onDelete: Cascade)
+  wallet         Wallet           @relation(fields: [walletId], references: [address], onDelete: Cascade)
+  TradingHistory TradingHistory[]
 }
 
 model TradingStat {
@@ -32,4 +33,16 @@ model TradingStat {
   base        String
   quote       String
   createdDt   DateTime
+}
+
+model TradingHistory {
+  id                  String   @id
+  tradingId           String
+  createdDt           DateTime
+  side                String
+  originalOfferAmount Float
+  filledAmount        Float
+  quotePrice          Float
+  offerAmount         Float
+  Trading             Trading  @relation(fields: [tradingId], references: [uuid], onDelete: Cascade)
 }

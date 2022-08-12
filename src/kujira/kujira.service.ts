@@ -270,6 +270,10 @@ export class KujiraService {
     await this.walletService.addStat(stat);
   }
 
+  async saveFilledOrders(trading: Trading, filledOrders: Order[]) {
+    await this.tradingService.addFilledOrderHistory(trading, filledOrders);
+  }
+
   async getMarketPrice(wallet: Wallet, contract: Contract) {
     return this.client.getMarketPrice(wallet, contract);
   }
@@ -285,4 +289,5 @@ export class KujiraService {
   async ordersCancel(wallet: Wallet, contract: Contract, unfulfilledOrders: Order[]) {
     return this.client.ordersCancel(wallet, contract, unfulfilledOrders);
   }
+
 }
