@@ -60,9 +60,9 @@ export class TradingService {
   }
 
   async addFilledOrderHistory(trading: Trading, filledOrders: Order[]) {
-    filledOrders.forEach(order => {
+    filledOrders.map(async order => {
       const {side, original_offer_amount, filled_amount, quote_price, offer_amount} = order;
-      this.prisma.tradingHistory.create({
+      await this.prisma.tradingHistory.create({
         data: {
           id: uuid(),
           tradingId: trading.uuid,
