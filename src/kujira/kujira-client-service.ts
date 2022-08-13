@@ -35,7 +35,7 @@ export class KujiraClientService {
   }
 
   // TODO market price caching.
-  async getMarketPrice(wallet: Wallet, contract: Contract) {
+  async getMarketPrice(wallet: Wallet, contract: Contract): Promise<number> {
     const orders = await this.books(wallet, contract, {
       limit: 1,
     });
@@ -43,7 +43,7 @@ export class KujiraClientService {
     if (orders.quote.length !== 1) throw new Error('orders.quote.length !== 1');
     const base = Number(orders.base[0].quote_price);
     const quote = Number(orders.quote[0].quote_price);
-    return (base + quote) / 2;
+    return +((base + quote) / 2).toFixed(contract.price_precision.decimal_places);
   }
 
   async books(
