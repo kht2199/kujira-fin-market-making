@@ -1,7 +1,4 @@
 import { Body, Controller, Delete, Get, HttpStatus, Logger, Param, Post, Put, Res } from "@nestjs/common";
-import { Response } from "express";
-import { KujiraService } from "./kujira/kujira.service";
-import { Trading } from "./app/trading";
 import { TradingAddDto } from "./dto/trading-add.dto";
 import { ResponseDto } from "./dto/response.dto";
 import { TasksService } from "./scheduler/task.service";
