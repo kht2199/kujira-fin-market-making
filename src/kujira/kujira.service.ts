@@ -82,13 +82,9 @@ export class KujiraService {
     let prevQuantity = 0;
     return orders
       .map(o => {
-        const temp = o.dq;
-        o.dq = Math.abs(Math.abs(o.dq) - Math.abs(prevQuantity));
-        prevQuantity = temp;
-        return o;
-      })
-      .map(o => {
-        const amount = o.side === "Sell" ? o.dq : (o.dq * o.price);
+        const quantity = Math.abs(Math.abs(o.dq) - Math.abs(prevQuantity));
+        prevQuantity = quantity;
+        const amount = o.side === "Sell" ? quantity : (quantity * o.price);
         return new OrderRequest(
           contract,
           o.side,
