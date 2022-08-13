@@ -25,37 +25,37 @@ export class TradingsController {
   }
 
   @Post('/tradings/:id/resume')
-  resumeTrading(@Param('id') id: string, @Res() res: Response) {
+  resumeTrading(@Param('id') id: string, @Res() res) {
     this.tasksService.resumeTrading(id);
-    res.status(HttpStatus.OK).json(ResponseDto.OK);
+    res.status(HttpStatus.OK).send(ResponseDto.OK);
   }
 
   @Post('/tradings/:id/stop')
-  stopTrading(@Param('id') id: string, @Res() res: Response) {
+  stopTrading(@Param('id') id: string, @Res() res) {
     this.tasksService.stopTrading(id);
-    res.status(HttpStatus.OK).json(ResponseDto.OK);
+    res.status(HttpStatus.OK).send(ResponseDto.OK);
   }
 
   @Post('/tradings/:id')
-  postTrading(@Param('id') id: string, @Body() body: TradingAddDto, @Res() res: Response) {
+  postTrading(@Param('id') id: string, @Body() body: TradingAddDto, @Res() res) {
     this.tasksService.modifyTrading(id, body)
-      .then(() => res.status(HttpStatus.OK).json(ResponseDto.OK));
+      .then(() => res.status(HttpStatus.OK).send(ResponseDto.OK));
   }
 
   @Delete('/tradings/:id')
-  deleteTrading(@Param('id') id: string, @Res() res: Response) {
+  deleteTrading(@Param('id') id: string, @Res() res) {
     this.tasksService.deleteTrading(id)
-      .then(() => res.status(HttpStatus.OK).json(ResponseDto.OK))
+      .then(() => res.status(HttpStatus.OK).send(ResponseDto.OK))
   }
 
   @Put('/tradings')
-  async putTrading(@Body() body: TradingAddDto, @Res() res: Response) {
+  async putTrading(@Body() body: TradingAddDto, @Res() res) {
     const wallet = this.tasksService.getWallet(body.account);
     if (!wallet) {
       throw new Error('Wallet not exists.');
     }
     await this.tasksService.addTrading(wallet, body);
-    res.status(HttpStatus.OK).json(ResponseDto.OK);
+    res.status(HttpStatus.OK).send(ResponseDto.OK);
   }
 
 }

@@ -1,14 +1,13 @@
 import { Controller, Get, HttpStatus, Res } from "@nestjs/common";
-import { Response } from "express";
 
 @Controller()
 export class AppController {
   constructor() {}
 
   @Get('/info')
-  getInfo(@Res() res: Response) {
+  getInfo(@Res() res) {
     res.status(HttpStatus.OK)
-      .json({
+      .send({
         version: process.env.VERSION,
       });
   }
