@@ -5,38 +5,36 @@ import { Logger } from "@nestjs/common";
 import { TradingState } from "./trading-state";
 import { TradingOrders } from "./trading-orders";
 import { OrderRequestDelta } from "./order-request-delta";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { MessageEvent } from "../event/message.event";
+import { OrderFilledEvent } from "../event/order-filled.event";
+import { OrderPrepareEvent } from "../event/order-prepare.event";
+import { OrderPreparedEvent } from "../event/order-prepared.event";
 
 const orderToString = (o: Order, baseSymbol: string, quoteSymbol: string) => {
   return `${o.side} ${o.original_offer_amount} ${o.side === 'Sell' ? baseSymbol : quoteSymbol} at ${o.quote_price} ${quoteSymbol}`
 }
 
 export class TradingStateExecutor {
-  private static readonly logger = new Logger(TradingStateExecutor.name);
+  private readonly logger = new Logger(TradingStateExecutor.name);
 
-  // noinspection JSUnusedLocalSymbols
-  private constructor() {}
+  constructor(
+    private readonly emitter: EventEmitter2,
+  ) {}
 
-  /**
-   * @param trading
-   * @param kujira
-   */
-  static async next(trading: Trading, kujira: KujiraService) {
-    const { state, wallet, contract, deltaRates } = trading;
+  async next(trading: Trading, kujira: KujiraService) {
+    const { state, wallet, contract, deltaRates, targetRate } = trading;
     const [baseSymbol, quoteSymbol] = contract.symbols;
     let currentOrders: TradingOrders;
-    let message: string;
     let marketPrice: number;
     let balanceRate: number;
     switch (state) {
       case TradingState.INITIALIZE:
         marketPrice = await kujira.getMarketPrice(wallet, contract);
         trading.balance = await kujira.getTradingBalance(wallet, contract);
-        balanceRate = trading.balance.calculateRate(marketPrice);
-        if (!trading.targetRate) {
-          trading.targetRate = trading.targetRate = balanceRate;
-        }
-        if (Math.abs(balanceRate - trading.targetRate) > Math.max(...deltaRates.map(r => Math.abs(r)))) {
-          throw new Error(`current wallet ratio [${balanceRate}] must less than config TARGET_RATE`);
+        if (trading.isExceedRateRange(marketPrice)) {
+          trading.state = TradingState.STOP;
+          throw new Error(`current trading[${trading.uuid}] exceed rate range. target: ${trading.targetRate}, deltas: ${trading.deltaRates}`);
         }
         currentOrders = await kujira.getOrders(trading);
         if (currentOrders.length === 1) {
@@ -59,11 +57,8 @@ export class TradingStateExecutor {
         trading.balance = await kujira.getTradingBalance(wallet, contract);
         const { baseAmount, quoteAmount} = trading.balance;
         balanceRate = trading.balance.calculateRate(marketPrice);
-        message = trading.toStringStat(marketPrice)
-        await kujira.saveStat(trading, marketPrice);
-        kujira.sendMessage(message);
         let tps: OrderRequestDelta[] = deltaRates
-          .map(r => new OrderRequestDelta(r, marketPrice, baseAmount, quoteAmount, trading.targetRate))
+          .map(r => new OrderRequestDelta(r, marketPrice, baseAmount, quoteAmount, targetRate))
           .filter(o => Math.abs(o.dq) >= trading.orderAmountMin);
         const notNormal = tps.filter(tp => !tp.normal);
         if (notNormal.length > 0) {
@@ -77,18 +72,15 @@ export class TradingStateExecutor {
         trading.preparedOrders = [...kujira.toOrderRequests(contract, sellOrders), ...kujira.toOrderRequests(contract, buyOrders)]
           .filter(o => o.amount !== 0);
         if (trading.preparedOrders.length === 0) {
-          this.logger.log('prepared orders empty');
+          this.logger.warn('[orders] prepared orders empty');
           return;
         }
+        this.emitter.emit(OrderPrepareEvent.NAME, new OrderPrepareEvent(trading, marketPrice));
         trading.state = TradingState.ORDER_PREPARED;
         return;
       case TradingState.ORDER_PREPARED:
         await kujira.orders(wallet, trading.preparedOrders);
-        message = trading.preparedOrders
-          .sort((n1, n2) => desc(n1.price, n2.price))
-          .map(o => o.toString())
-          .join('\n');
-        kujira.sendMessage(`[orders] submit ${baseSymbol}/${quoteSymbol}\n${message}`);
+        this.emitter.emit(OrderPreparedEvent.NAME, new OrderPreparedEvent(trading));
         trading.state = TradingState.ORDER_CHECK;
         return;
       case TradingState.ORDER_CHECK:
@@ -107,12 +99,13 @@ export class TradingStateExecutor {
           const fulfilledOrdersFiltered = currentOrders.fulfilledOrders
             .filter(a => fulfilledOrderIds.indexOf(a.idx) === -1)
           if (fulfilledOrdersFiltered.length > 0) {
-            this.logger.log(JSON.stringify(fulfilledOrdersFiltered));
             const message = fulfilledOrdersFiltered
               .sort((o1, o2) => desc(+o1.quote_price, +o2.quote_price))
               .map(o => orderToString(o, baseSymbol, quoteSymbol))
               .join('\n');
-            kujira.sendMessage(`[orders] filled ${baseSymbol}/${quoteSymbol}\n${message}`);
+            this.emitter.emit(MessageEvent.NAME, new MessageEvent(
+              `[orders] filled ${baseSymbol}/${quoteSymbol}\n${message}`
+            ));
           }
           trading.fulfilledOrders = currentOrders.fulfilledOrders;
         }
@@ -137,20 +130,19 @@ export class TradingStateExecutor {
         currentOrders = await kujira.getOrders(trading);
         if (currentOrders.lengthFilled > 0) {
           const filledOrders: Order[] = currentOrders.filledOrders;
-          message = `[orders] withdraw ${baseSymbol}/${quoteSymbol}: ${filledOrders.map(o => o.idx).join(',')}`;
           await kujira.ordersWithdraw(wallet, contract, filledOrders);
-          await kujira.saveFilledOrders(trading, filledOrders);
-          kujira.sendMessage(message);
+          this.emitter.emit(OrderFilledEvent.NAME, new OrderFilledEvent(trading, filledOrders));
         }
         if (currentOrders.lengthUnfulfilled > 0) {
           const unfulfilledOrders: Order[] = currentOrders.unfulfilledOrders;
-          message = `[orders] cancel ${baseSymbol}/${quoteSymbol}: ${unfulfilledOrders.map(o => o.idx).join(',')}`;
           await kujira.ordersCancel(wallet, contract, unfulfilledOrders);
-          kujira.sendMessage(message);
+          this.emitter.emit(MessageEvent.NAME, new MessageEvent(
+            `[orders] cancel ${baseSymbol}/${quoteSymbol}: ${unfulfilledOrders.map(o => o.idx).join(',')}`
+          ));
         }
         if (state === TradingState.CLOSE_FOR_STOP) {
           trading.state = TradingState.STOP;
-          return
+          return;
         }
         trading.state = TradingState.ORDER;
         return;

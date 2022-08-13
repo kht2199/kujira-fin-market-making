@@ -128,4 +128,9 @@ balance quote: ${quoteAmount.toFixed(5)} ${q}
 balance rate: ${balanceRate.toFixed(5)}
 target rate: ${this.targetRate.toFixed(5)}`;
   }
+
+  isExceedRateRange(marketPrice: number) {
+    const balanceRate = this.balance.calculateRate(marketPrice);
+    return Math.abs(balanceRate - this.targetRate) > Math.max(...this.deltaRates.map(r => Math.abs(r)))
+  }
 }

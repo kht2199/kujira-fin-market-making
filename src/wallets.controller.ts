@@ -1,22 +1,25 @@
-import { Controller, Get, HttpStatus, Logger, Param, Res } from "@nestjs/common";
+import { Controller, Get, HttpStatus, Param, Res } from "@nestjs/common";
 import { Response } from "express";
 import { KujiraService } from "./kujira/kujira.service";
+import { TasksService } from "./scheduler/task.service";
 
 @Controller()
 export class WalletsController {
-  private readonly logger = new Logger(WalletsController.name);
 
-  constructor(private readonly kujiraService: KujiraService) {}
+  constructor(
+    private readonly tasksService: TasksService,
+    private readonly kujiraService: KujiraService,
+  ) {}
 
   @Get('/wallets')
   getWallets(@Res() res: Response) {
     res.status(HttpStatus.OK)
-      .json(this.kujiraService.getWallets());
+      .json(this.tasksService.getWallets());
   }
 
   @Get('/wallets/:address/balances')
   getBalances(@Param() params, @Res() res: Response) {
-    const wallet = this.kujiraService.getWallet(params.address)
+    const wallet = this.tasksService.getWallet(params.address)
     this.kujiraService.getBalances(wallet)
       .then(balances => {
         res.status(HttpStatus.OK)

@@ -13,6 +13,7 @@ import { PrismaService } from "./config/prisma.service";
 import { WalletService } from "./service/wallet.service";
 import { TradingService } from "./service/trading.service";
 import { EventEmitterModule } from "@nestjs/event-emitter";
+import { EventService } from "./service/event.service";
 
 @Module({
   imports: [
@@ -30,7 +31,8 @@ import { EventEmitterModule } from "@nestjs/event-emitter";
   providers: [
     KujiraClientService, KujiraService,
     PrismaService, TasksService,
-    WalletService, TradingService
+    WalletService, TradingService,
+    EventService,
   ],
 })
 export class AppModule {}

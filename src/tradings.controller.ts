@@ -4,56 +4,57 @@ import { KujiraService } from "./kujira/kujira.service";
 import { Trading } from "./app/trading";
 import { TradingAddDto } from "./dto/trading-add.dto";
 import { ResponseDto } from "./dto/response.dto";
+import { TasksService } from "./scheduler/task.service";
 
 @Controller()
 export class TradingsController {
   private readonly logger = new Logger(TradingsController.name);
 
-  constructor(private readonly kujiraService: KujiraService) {}
+  constructor(
+    private readonly tasksService: TasksService
+  ) {}
 
   @Get('/tradings')
   getTradings() {
-    return this.kujiraService.getTradings();
+    return this.tasksService.getTradings();
   }
 
   @Get('/tradings/:id')
   async getTrading(@Param() params) {
-    return await this.kujiraService.getTrading(params.id);
+    return await this.tasksService.getTrading(params.id);
   }
 
   @Post('/tradings/:id/resume')
   resumeTrading(@Param('id') id: string, @Res() res: Response) {
-    this.kujiraService.resumeTrading(id);
+    this.tasksService.resumeTrading(id);
     res.status(HttpStatus.OK).json(ResponseDto.OK);
   }
 
   @Post('/tradings/:id/stop')
   stopTrading(@Param('id') id: string, @Res() res: Response) {
-    this.kujiraService.stopTrading(id);
+    this.tasksService.stopTrading(id);
     res.status(HttpStatus.OK).json(ResponseDto.OK);
   }
 
   @Post('/tradings/:id')
   postTrading(@Param('id') id: string, @Body() body: TradingAddDto, @Res() res: Response) {
-    this.kujiraService.modifyTrading(id, body)
+    this.tasksService.modifyTrading(id, body)
       .then(() => res.status(HttpStatus.OK).json(ResponseDto.OK));
   }
 
   @Delete('/tradings/:id')
   deleteTrading(@Param('id') id: string, @Res() res: Response) {
-    this.kujiraService.deleteTrading(id)
+    this.tasksService.deleteTrading(id)
       .then(() => res.status(HttpStatus.OK).json(ResponseDto.OK))
   }
 
   @Put('/tradings')
   async putTrading(@Body() body: TradingAddDto, @Res() res: Response) {
-    const wallet = this.kujiraService.getWallet(body.account);
-    const contract = this.kujiraService.getContract(body.contract);
-    if (!wallet || !contract) {
-      throw new Error('Wallet or Contract not exists.');
+    const wallet = this.tasksService.getWallet(body.account);
+    if (!wallet) {
+      throw new Error('Wallet not exists.');
     }
-    const trading = new Trading(wallet, contract, body.deltaRates, body.targetRate, body.orderAmountMin);
-    await this.kujiraService.addTrading(wallet, trading);
+    await this.tasksService.addTrading(wallet, body);
     res.status(HttpStatus.OK).json(ResponseDto.OK);
   }
 
