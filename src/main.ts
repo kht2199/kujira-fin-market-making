@@ -19,6 +19,6 @@ async function bootstrap() {
       disableErrorMessages: false,
     })
   );
-  await app.listen(3000);
+  await app.listen(3000, '0.0.0.0');
 }
 (async () => await bootstrap())();
