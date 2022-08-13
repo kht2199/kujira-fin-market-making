@@ -6,10 +6,9 @@ This code is a server that runs a bot for market making.
 It simply maintains the asset ratio of the current wallet and buys when the price goes down,
 and sells when the price goes up.  
 
-> Now only support and tested **KUJI/axlUSD** be careful and test with your penny money. 
+> Now only support and tested **KUJI/axlUSDC, ATOM/axlUSDC** be careful and test with your penny money. 
 
-You can check the transaction log in the channel.
-https://t.me/GreenWhaleKujira
+You can check the transaction log in the [channel](https://t.me/GreenWhaleKujira).
 
 # Prerequisites
 1. [git](https://git-scm.com/downloads)
@@ -68,17 +67,18 @@ TELEGRAM_CHAT_ID=
 | TELEGRAM_CHAT_ID | Telegram chat ID to receive transaction details                                                                                                       |
 
 # Plan
-- ✅ KUJI/axlUSDC
+- Support Markets
+  - ✅ KUJI/axlUSDC
+  - ✅ ATOM/axlUSDC
 - ✅ Webpage
   - ✅ Configuration
 - ✅ Support multiple wallet
-- Support setting to change coins to be paid as fees
 - Use Database for all data
   - ✅ Save Wallet, Trading data on restart server.
   - Statistics
+- Support setting to change coins to be paid as fees
 - Support multiple strategy
 - Websocket Support for Performance
-- wETH/axlUSDC
 - UI for statistics
 - Support combine with CEX
 - Client Application

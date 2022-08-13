@@ -19,7 +19,7 @@ export class TasksService {
     if (!mnemonics) throw new Error('MNEMONIC not exists');
     Promise.all(
       mnemonics.split(',')
-        .map(m => kujiraService.connect(endpoint, m))
+        .map(m => kujiraService.connect(endpoint, m.trim()))
     )
       .then(wallets => kujiraService.addWallets(wallets));
     this.addNewInterval(
