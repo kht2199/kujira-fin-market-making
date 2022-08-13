@@ -70,12 +70,13 @@ TELEGRAM_CHAT_ID=
 - Support Markets
   - ✅ KUJI/axlUSDC
   - ✅ ATOM/axlUSDC
-- ✅ Webpage
-  - ✅ Configuration
+- ✅ Web page
+  - ✅ Configuration([https](https://fin.taek.kim/market-making) [http](http://fin.taek.kim/market-making))
+  - ✅ Swagger (/api-docs)
 - ✅ Support multiple wallet
-- Use Database for all data
-  - ✅ Save Wallet, Trading data on restart server.
-  - Statistics
+- Database
+  - ✅ prisma studio
+  - ✅ wallet info, trading info, wallet statistics, trading history.
 - Support setting to change coins to be paid as fees
 - Support multiple strategy
 - Websocket Support for Performance
