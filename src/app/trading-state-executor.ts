@@ -30,7 +30,7 @@ export class TradingStateExecutor {
     switch (state) {
       case TradingState.INITIALIZE:
         marketPrice = await kujira.getMarketPrice(wallet, contract);
-        trading.balance = await kujira.fetchBalances(wallet, contract);
+        trading.balance = await kujira.getTradingBalance(wallet, contract);
         balanceRate = trading.balance.calculateRate(marketPrice);
         if (!trading.targetRate) {
           trading.targetRate = trading.targetRate = balanceRate;
@@ -38,7 +38,7 @@ export class TradingStateExecutor {
         if (Math.abs(balanceRate - trading.targetRate) > Math.max(...deltaRates.map(r => Math.abs(r)))) {
           throw new Error(`current wallet ratio [${balanceRate}] must less than config TARGET_RATE`);
         }
-        currentOrders = await kujira.fetchOrders(trading);
+        currentOrders = await kujira.getOrders(trading);
         if (currentOrders.length === 1) {
           trading.state = TradingState.CLOSE_ORDERS;
           return;
@@ -50,13 +50,13 @@ export class TradingStateExecutor {
         trading.state = TradingState.ORDER;
         return;
       case TradingState.ORDER:
-        currentOrders = await kujira.fetchOrders(trading);
+        currentOrders = await kujira.getOrders(trading);
         if (currentOrders.length >= 1) {
           trading.state = TradingState.CLOSE_ORDERS;
           return;
         }
         marketPrice = await kujira.getMarketPrice(wallet, contract);
-        trading.balance = await kujira.fetchBalances(wallet, contract);
+        trading.balance = await kujira.getTradingBalance(wallet, contract);
         const { baseAmount, quoteAmount} = trading.balance;
         balanceRate = trading.balance.calculateRate(marketPrice);
         message = trading.toStringStat(marketPrice)
@@ -97,7 +97,7 @@ export class TradingStateExecutor {
           return;
         }
         trading.lastMarketPrice = marketPrice;
-        currentOrders = await kujira.fetchOrders(trading);
+        currentOrders = await kujira.getOrders(trading);
         if (currentOrders.length === 0) {
           trading.state = TradingState.ORDER;
           return;
@@ -134,7 +134,7 @@ export class TradingStateExecutor {
       case TradingState.ORDER_EMPTY_SIDE_WITH_GAP:
       case TradingState.CLOSE_FOR_STOP:
       case TradingState.CLOSE_ORDERS:
-        currentOrders = await kujira.fetchOrders(trading);
+        currentOrders = await kujira.getOrders(trading);
         if (currentOrders.lengthFilled > 0) {
           const filledOrders: Order[] = currentOrders.filledOrders;
           message = `[orders] withdraw ${baseSymbol}/${quoteSymbol}: ${filledOrders.map(o => o.idx).join(',')}`;

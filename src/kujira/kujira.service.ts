@@ -103,11 +103,11 @@ export class KujiraService {
     return contract;
   }
 
-  async fetchAllBalances(wallet: Wallet): Promise<Balance[]> {
+  async getBalances(wallet: Wallet): Promise<Balance[]> {
     return this.client.getBalances(wallet);
   }
 
-  async fetchBalances(wallet: Wallet, contract: Contract): Promise<TradingBalance> {
+  async getTradingBalance(wallet: Wallet, contract: Contract): Promise<TradingBalance> {
     const balances = (await this.client.getBalances(wallet))
       .map((coin: Coin) => ({
         amount: `${
@@ -128,7 +128,7 @@ export class KujiraService {
     return new TradingBalance(base, quote);
   }
 
-  async fetchOrders(trading: Trading): Promise<TradingOrders> {
+  async getOrders(trading: Trading): Promise<TradingOrders> {
     const { wallet, contract } = trading;
     return new TradingOrders(await this.client.getOrders(wallet, contract));
   }
@@ -170,7 +170,7 @@ export class KujiraService {
     return new TradingDto(trading);
   }
 
-  async modifyTrading(uuid: string, body: TradingAddDto) {
+  async modifyTrading(uuid: string, body: TradingAddDto): Promise<void> {
     const tradings: Trading[] = Array.from(this.wallets.values()).flat();
     const trading: Trading = tradings.filter(t => t.uuid === uuid)[0];
     if (!trading) {
@@ -188,14 +188,13 @@ export class KujiraService {
     if (trading.targetRate !== body.targetRate) {
       messages.push(`target rate: ${trading.targetRate} to ${body.targetRate}`);
     }
-    trading.deltaRates = body.deltaRates;
-    trading.orderAmountMin = body.orderAmountMin;
-    trading.targetRate = body.targetRate;
-    await this.tradingService.updateTrading(trading);
     if (messages.length > 0) {
+      trading.deltaRates = body.deltaRates;
+      trading.orderAmountMin = body.orderAmountMin;
+      trading.targetRate = body.targetRate;
+      await this.tradingService.updateTrading(trading);
       this.sendMessage(`[config] changed ${trading.contract.market}\n${messages.join("\n")}`);
     }
-    return new TradingDto(trading);
   }
 
   stopTrading(id: string) {

@@ -17,7 +17,7 @@ export class WalletsController {
   @Get('/wallets/:address/balances')
   getBalances(@Param() params, @Res() res: Response) {
     const wallet = this.kujiraService.getWallet(params.address)
-    this.kujiraService.fetchAllBalances(wallet)
+    this.kujiraService.getBalances(wallet)
       .then(balances => {
         res.status(HttpStatus.OK)
           .json(balances);
