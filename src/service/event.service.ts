@@ -55,7 +55,7 @@ export class EventService {
 
   @OnEvent(MessageEvent.NAME)
   handleMessageEvent(payload: MessageEvent) {
-    this.logger.debug(payload);
+    this.logger.debug(payload.message);
     this.sendMessage(payload.message);
   }
 
