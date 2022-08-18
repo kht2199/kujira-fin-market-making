@@ -17,12 +17,10 @@ export class WalletsController {
   }
 
   @Get('/wallets/:address/balances')
-  getBalances(@Param() params, @Res() res) {
-    const wallet = this.tasksService.getWallet(params.address)
-    this.kujiraService.getBalances(wallet)
-      .then(balances => {
-        res.status(HttpStatus.OK)
-          .send(balances);
-      })
+  async getBalances(@Param('address') address: string, @Res() res) {
+    const wallet = this.tasksService.getWallet(address)
+    const balances = await this.kujiraService.getBalances(wallet);
+    res.status(HttpStatus.OK)
+      .send(balances);
   }
 }

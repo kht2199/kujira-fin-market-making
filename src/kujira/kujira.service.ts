@@ -45,7 +45,7 @@ export class KujiraService {
   }
 
   async getBalances(wallet: Wallet): Promise<Balance[]> {
-    return this.client.getBalances(wallet);
+    return await this.client.getBalances(wallet);
   }
 
   async getTradingBalance(wallet: Wallet, contract: Contract): Promise<TradingBalance> {
