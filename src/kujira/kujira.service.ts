@@ -79,9 +79,9 @@ export class KujiraService {
     let prevTotalValue;
     let prevBaseAmount;
     let prevQuoteAmount;
+    const {balance, targetRate, orderAmountMin} = trading;
     return orders
       .map(o => {
-        const {balance, targetRate, orderAmountMin} = trading;
         if (!prevTotalValue) {
           prevTotalValue = balance.baseAmount * o.price + balance.quoteAmount;
           const baseAmount = prevTotalValue * targetRate / o.price;
