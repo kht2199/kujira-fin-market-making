@@ -86,10 +86,10 @@ export class KujiraService {
           prevTotalValue = balance.baseAmount * o.price + balance.quoteAmount;
           const baseAmount = prevTotalValue * targetRate / o.price;
           const deltaBaseAmount = baseAmount - balance.baseAmount;
-          if (Math.abs(deltaBaseAmount) < orderAmountMin) {
-            prevTotalValue = undefined;
-            return;
-          }
+          // if (Math.abs(deltaBaseAmount) < orderAmountMin) {
+          //   prevTotalValue = undefined;
+          //   return;
+          // }
           const deltaQuoteAmount = deltaBaseAmount * o.price * -1;
           prevBaseAmount = balance.baseAmount + deltaBaseAmount;
           prevQuoteAmount = balance.quoteAmount + deltaQuoteAmount;
