@@ -27,15 +27,10 @@ export class TradingStateExecutor {
     const [baseSymbol, quoteSymbol] = contract.symbols;
     let currentOrders: TradingOrders;
     let marketPrice: number;
-    let balanceRate: number;
     switch (state) {
       case TradingState.INITIALIZE:
         marketPrice = await kujira.getMarketPrice(wallet, contract);
         trading.balance = await kujira.getTradingBalance(wallet, contract);
-        if (trading.isExceedRateRange(marketPrice)) {
-          trading.state = TradingState.STOP;
-          throw new Error(`current trading[${trading.uuid}] exceed rate range. target: ${trading.targetRate}, deltas: ${trading.deltaRates}`);
-        }
         currentOrders = await kujira.getOrders(trading);
         if (currentOrders.length === 1) {
           trading.state = TradingState.CLOSE_ORDERS;

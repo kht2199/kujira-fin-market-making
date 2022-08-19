@@ -97,7 +97,7 @@ export class KujiraService {
             contract,
             o.side,
             o.price,
-            o.side === "Sell" ? deltaBaseAmount : (deltaBaseAmount * o.price)
+            o.side === "Sell" ? Math.abs(deltaBaseAmount) : (deltaBaseAmount * o.price)
           );
         }
         const totalValue = prevBaseAmount * o.price + prevQuoteAmount;
@@ -110,7 +110,7 @@ export class KujiraService {
           contract,
           o.side,
           o.price,
-          o.side === "Sell" ? deltaBaseAmount : (deltaBaseAmount * o.price)
+          o.side === "Sell" ? Math.abs(deltaBaseAmount) : (deltaBaseAmount * o.price)
         );
       })
       .filter(o => !!o);
