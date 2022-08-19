@@ -54,25 +54,25 @@ describe("Trading.ts", () => {
     expect(baseValue / totalValue).toEqual(0.5384260327717517);
   })
 
-  // describe("createOrderRequests Sell", () => {
-  //   const contract = service.getContract('kujira14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sl4e867')
-  //   const trading = new Trading(null,
-  //     contract,
-  //     [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3], 0.5, 0
-  //   );
-  //   trading.balance = new TradingBalance({denom: '', amount: '12000'}, {denom: '', amount: '15694.56123'});
-  //   const orders = service.createOrderRequests(trading, 1.62);
-  //   orders.forEach(o => {
-  //     console.log(`${o.side} ${o.amount} ${o.price}`)
-  //   })
-  //   // expect(baseValue / totalValue).toEqual(0.5384260327717517);
-  // })
+  describe("createOrderRequests Sell", () => {
+    const contract = service.getContract('kujira14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sl4e867')
+    const trading = new Trading(null,
+      contract,
+      [-0.03, -0.025, -0.02, -0.015, -0.01, -0.005, 0, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03], 0.5, 58
+    );
+    trading.balance = new TradingBalance({denom: '', amount: '10000'}, {denom: '', amount: '15694.56123'});
+    const orders = service.createOrderRequests(trading, 1.62);
+    orders.forEach(o => {
+      console.log(`${o.side} ${o.amount} ${o.price}`)
+    })
+    // expect(baseValue / totalValue).toEqual(0.5384260327717517);
+  })
 
   describe("createOrderRequests Buy", () => {
     const contract = service.getContract('kujira14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sl4e867')
     const trading = new Trading(null,
       contract,
-      [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3], 0.5, 0
+      [-0.03, -0.025, -0.02, -0.015, -0.01, -0.005, 0, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03], 0.5, 0
     );
     trading.balance = new TradingBalance({denom: '', amount: '9298.16767'}, {denom: '', amount: '15694.56123'});
     const orders = service.createOrderRequests(trading, 1.62);

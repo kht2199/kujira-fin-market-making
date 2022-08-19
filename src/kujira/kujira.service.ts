@@ -83,15 +83,15 @@ export class KujiraService {
     let skipped = false;
     return orders
       .map(o => {
-        if (!prevTotalValue) {
-          prevTotalValue = balance.baseAmount * o.price + balance.quoteAmount;
-          const baseAmount = prevTotalValue * targetRate / o.price;
+        if (!skipped) {
+          const totalValue = balance.baseAmount * o.price + balance.quoteAmount;
+          const baseAmount = totalValue * targetRate / o.price;
           const deltaBaseAmount = baseAmount - balance.baseAmount;
-          if (!skipped && Math.abs(deltaBaseAmount) < orderAmountMin) {
-            prevTotalValue = undefined;
-            skipped = true;
+          if (Math.abs(deltaBaseAmount) < orderAmountMin) {
             return;
           }
+          skipped = true;
+          prevTotalValue = totalValue;
           const deltaQuoteAmount = deltaBaseAmount * o.price * -1;
           prevBaseAmount = balance.baseAmount + deltaBaseAmount;
           prevQuoteAmount = balance.quoteAmount + deltaQuoteAmount;
