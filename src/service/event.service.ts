@@ -43,6 +43,7 @@ export class EventService {
       quote,
       marketPrice,
     };
+    this.logger.log(payload.message);
     await this.walletService.addStat(stat);
     this.sendMessage(payload.message);
   }
