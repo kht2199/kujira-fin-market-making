@@ -55,22 +55,7 @@ export class TradingStateExecutor {
         }
         marketPrice = await kujira.getMarketPrice(wallet, contract);
         trading.balance = await kujira.getTradingBalance(wallet, contract);
-        const { baseAmount, quoteAmount} = trading.balance;
-        balanceRate = trading.balance.calculateRate(marketPrice);
-        let tps: OrderRequestDelta[] = deltaRates
-          .map(r => new OrderRequestDelta(r, marketPrice, baseAmount, quoteAmount, targetRate))
-          .filter(o => Math.abs(o.dq) >= trading.orderAmountMin);
-        const notNormal = tps.filter(tp => !tp.normal);
-        if (notNormal.length > 0) {
-          this.logger.warn(`[price] found gap between market price{${marketPrice}} and order price{${notNormal[0].price}}`)
-          this.logger.warn(`[orders] prepared: ${JSON.stringify(tps)}`)
-        }
-        const sellOrders = tps.filter(tp => tp.side === 'Sell')
-          .sort((n1, n2) => asc(n1.price, n2.price));
-        const buyOrders = tps.filter(tp => tp.side === 'Buy')
-          .sort((n1, n2) => desc(n1.price, n2.price));
-        trading.preparedOrders = [...kujira.toOrderRequests(contract, sellOrders), ...kujira.toOrderRequests(contract, buyOrders)]
-          .filter(o => o.amount !== 0);
+        trading.preparedOrders = kujira.createOrderRequests(trading, marketPrice);
         if (trading.preparedOrders.length === 0) {
           this.logger.warn('[orders] prepared orders empty');
           return;

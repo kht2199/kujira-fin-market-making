@@ -8,9 +8,11 @@ import { OrderRequestDelta } from "./order-request-delta";
 import { WalletService } from "../service/wallet.service";
 import { TradingService } from "../service/trading.service";
 import { PrismaService } from "../config/prisma.service";
+import { Trading } from "./trading";
+import { TradingBalance } from "./trading-balance";
 
 describe("Trading.ts", () => {
-  let service: KujiraService;
+  let service: KujiraService = new KujiraService(undefined, undefined);
 
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
@@ -33,11 +35,11 @@ describe("Trading.ts", () => {
     const quote = 10;
     const marketPrice = 100;
     const targetRate = base * 100 / (base * 100 + quote);
-    it("0.01 퍼센트 상위 가격인 101에서 매도주문이 발생해야한다", () => {
+    it("0.01 퍼센트 상위 가격인 101에서 매도주문이 발생해야한다. " + targetRate, () => {
       let order = new OrderRequestDelta(0.01, marketPrice, base, quote, targetRate);
       expect(order).toMatchObject({ _price: 101, _side: "Sell" });
     });
-    it("0.01 퍼센트 하위 가격인 99에서 매수주문이 발생해야한다", () => {
+    it("0.01 퍼센트 하위 가격인 99에서 매수주문이 발생해야한다 " + targetRate, () => {
       let order = new OrderRequestDelta(-0.01, marketPrice, base, quote, targetRate);
       expect(order).toMatchObject({ _price: 99, _side: "Buy" });
     });
@@ -50,5 +52,33 @@ describe("Trading.ts", () => {
     const baseValue = price * base;
     const totalValue = baseValue + quote;
     expect(baseValue / totalValue).toEqual(0.5384260327717517);
+  })
+
+  // describe("createOrderRequests Sell", () => {
+  //   const contract = service.getContract('kujira14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sl4e867')
+  //   const trading = new Trading(null,
+  //     contract,
+  //     [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3], 0.5, 0
+  //   );
+  //   trading.balance = new TradingBalance({denom: '', amount: '12000'}, {denom: '', amount: '15694.56123'});
+  //   const orders = service.createOrderRequests(trading, 1.62);
+  //   orders.forEach(o => {
+  //     console.log(`${o.side} ${o.amount} ${o.price}`)
+  //   })
+  //   // expect(baseValue / totalValue).toEqual(0.5384260327717517);
+  // })
+
+  describe("createOrderRequests Buy", () => {
+    const contract = service.getContract('kujira14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sl4e867')
+    const trading = new Trading(null,
+      contract,
+      [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3], 0.5, 0
+    );
+    trading.balance = new TradingBalance({denom: '', amount: '9298.16767'}, {denom: '', amount: '15694.56123'});
+    const orders = service.createOrderRequests(trading, 1.62);
+    orders.forEach(o => {
+      console.log(`${o.side} ${o.amount} ${o.price}`)
+    })
+    // expect(baseValue / totalValue).toEqual(0.5384260327717517);
   })
 });

@@ -10,6 +10,7 @@ import { Wallet } from "../app/wallet";
 import { Coin } from "@cosmjs/stargate";
 import { OrderRequest } from "../app/order-request";
 import { OrderRequestDelta } from "../app/order-request-delta";
+import { asc, desc } from "../util/util";
 
 @Injectable()
 export class KujiraService {
@@ -74,24 +75,45 @@ export class KujiraService {
     return new TradingOrders(await this.client.getOrders(wallet, contract));
   }
 
-  /**
-   * @param contract
-   * @param orders amount should greater than prev item.
-   */
-  public toOrderRequests(contract: Contract, orders: OrderRequestDelta[]): OrderRequest[] {
-    let prevQuantity = 0;
+  public toOrderRequests(contract: Contract, trading: Trading, marketPrice: number, orders: OrderRequestDelta[]): OrderRequest[] {
+    let prevTotalValue;
+    let prevBaseAmount;
+    let prevQuoteAmount;
     return orders
       .map(o => {
-        const quantity = Math.abs(Math.abs(o.dq) - Math.abs(prevQuantity));
-        prevQuantity = o.dq;
-        const amount = o.side === "Sell" ? quantity : (quantity * o.price);
+        const {balance, targetRate, orderAmountMin} = trading;
+        if (!prevTotalValue) {
+          prevTotalValue = balance.baseAmount * o.price + balance.quoteAmount;
+          const baseAmount = prevTotalValue * targetRate / o.price;
+          const deltaBaseAmount = baseAmount - balance.baseAmount;
+          if (Math.abs(deltaBaseAmount) < orderAmountMin) {
+            prevTotalValue = undefined;
+            return;
+          }
+          const deltaQuoteAmount = deltaBaseAmount * o.price * -1;
+          prevBaseAmount = balance.baseAmount + deltaBaseAmount;
+          prevQuoteAmount = balance.quoteAmount + deltaQuoteAmount;
+          return new OrderRequest(
+            contract,
+            o.side,
+            o.price,
+            o.side === "Sell" ? deltaBaseAmount : (deltaBaseAmount * o.price)
+          );
+        }
+        const totalValue = prevBaseAmount * o.price + prevQuoteAmount;
+        const baseAmount = totalValue * targetRate / o.price;
+        const deltaBaseAmount = baseAmount - prevBaseAmount;
+        const deltaQuoteAmount = deltaBaseAmount * o.price * -1;
+        prevBaseAmount = baseAmount;
+        prevQuoteAmount = prevQuoteAmount + deltaQuoteAmount;
         return new OrderRequest(
           contract,
           o.side,
           o.price,
-          amount
+          o.side === "Sell" ? deltaBaseAmount : (deltaBaseAmount * o.price)
         );
-      });
+      })
+      .filter(o => !!o);
   }
 
   async getMarketPrice(wallet: Wallet, contract: Contract) {
@@ -110,4 +132,18 @@ export class KujiraService {
     return this.client.ordersCancel(wallet, contract, unfulfilledOrders);
   }
 
+  createOrderRequests(trading: Trading, marketPrice: number) {
+    const {contract, deltaRates, targetRate} = trading;
+    const { baseAmount, quoteAmount} = trading.balance;
+    let tps: OrderRequestDelta[] = deltaRates
+      .map(r => new OrderRequestDelta(r, marketPrice, baseAmount, quoteAmount, targetRate))
+    const sellOrders = tps.filter(tp => tp.side === 'Sell')
+      .sort((n1, n2) => asc(n1.price, n2.price));
+    const buyOrders = tps.filter(tp => tp.side === 'Buy')
+      .sort((n1, n2) => desc(n1.price, n2.price));
+    return [
+      ...this.toOrderRequests(contract, trading, marketPrice, sellOrders),
+      ...this.toOrderRequests(contract, trading, marketPrice, buyOrders)
+    ].filter(o => o.amount !== 0)
+  }
 }
