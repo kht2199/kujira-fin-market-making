@@ -27,6 +27,10 @@ export class TradingStateExecutor {
     const [baseSymbol, quoteSymbol] = contract.symbols;
     let currentOrders: TradingOrders;
     let marketPrice: number;
+    if (trading.sleepIntervals > 0) {
+      --trading.sleepIntervals;
+      return;
+    }
     switch (state) {
       case TradingState.INITIALIZE:
         marketPrice = await kujira.getMarketPrice(wallet, contract);
@@ -90,6 +94,8 @@ export class TradingStateExecutor {
           trading.fulfilledOrders = currentOrders.fulfilledOrders;
         }
         if (currentOrders.lengthFulfilled >= currentOrders.length / 2) {
+          // if schedule INTERVAL is 10_000, sleep for 3 * 10 seconds.
+          trading.sleepIntervals = 3;
           trading.state = TradingState.CLOSE_ORDERS;
           return;
         }

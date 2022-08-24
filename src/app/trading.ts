@@ -21,6 +21,8 @@ export class Trading {
 
   lastMarketPrice: number;
 
+  sleepIntervals: number = 0;
+
   constructor(
     private _wallet: Wallet,
     private _contract: Contract,
