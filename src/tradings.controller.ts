@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpStatus, Logger, Param, Post, Put, Res } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Logger, Param, Post, Put } from "@nestjs/common";
 import { TradingAddDto } from "./dto/trading-add.dto";
 import { ResponseDto } from "./dto/response.dto";
 import { TasksService } from "./scheduler/task.service";
@@ -22,37 +22,37 @@ export class TradingsController {
   }
 
   @Post('/tradings/:id/resume')
-  resumeTrading(@Param('id') id: string, @Res() res) {
+  resumeTrading(@Param('id') id: string) {
     this.tasksService.resumeTrading(id);
-    res.status(HttpStatus.OK).send(ResponseDto.OK);
+    return ResponseDto.OK;
   }
 
   @Post('/tradings/:id/stop')
-  stopTrading(@Param('id') id: string, @Res() res) {
+  stopTrading(@Param('id') id: string) {
     this.tasksService.stopTrading(id);
-    res.status(HttpStatus.OK).send(ResponseDto.OK);
+    return ResponseDto.OK;
   }
 
   @Post('/tradings/:id')
-  postTrading(@Param('id') id: string, @Body() body: TradingAddDto, @Res() res) {
-    this.tasksService.modifyTrading(id, body)
-      .then(() => res.status(HttpStatus.OK).send(ResponseDto.OK));
+  async postTrading(@Param('id') id: string, @Body() body: TradingAddDto) {
+    await this.tasksService.modifyTrading(id, body);
+    return ResponseDto.OK;
   }
 
   @Delete('/tradings/:id')
-  deleteTrading(@Param('id') id: string, @Res() res) {
-    this.tasksService.deleteTrading(id)
-      .then(() => res.status(HttpStatus.OK).send(ResponseDto.OK))
+  async deleteTrading(@Param('id') id: string) {
+    await this.tasksService.deleteTrading(id);
+    return ResponseDto.OK;
   }
 
   @Put('/tradings')
-  async putTrading(@Body() body: TradingAddDto, @Res() res) {
+  async putTrading(@Body() body: TradingAddDto) {
     const wallet = this.tasksService.getWallet(body.account);
     if (!wallet) {
       throw new Error('Wallet not exists.');
     }
     await this.tasksService.addTrading(wallet, body);
-    res.status(HttpStatus.OK).send(ResponseDto.OK);
+    return ResponseDto.OK;
   }
 
 }
