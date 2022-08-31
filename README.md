@@ -20,6 +20,7 @@ A node is required to run a program.
 If node is not installed on the server, installation through nvm is recommended.
 
 # Install
+[Installation Guide by @abevz](https://github.com/abevz/kujirabot/blob/main/kujirabot.md)
 ```bash
 git clone https://github.com/kht2199/kujira-fin-market-making.git
 cd kujira-fin-market-making
