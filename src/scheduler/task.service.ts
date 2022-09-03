@@ -62,7 +62,7 @@ export class TasksService {
     this.addNewInterval(
       'Market Making',
       +interval,
-      async () => await asyncCallWithTimeout(() => this.startMarketMakings(), interval),
+      async () => await asyncCallWithTimeout(this.startMarketMakings, interval),
     );
   }
 
@@ -182,12 +182,11 @@ export class TasksService {
     this.schedulerRegistry.addInterval(intervalName, interval);
   }
 
-  startMarketMakings() {
+  async startMarketMakings() {
     const tradings = Array.from(this.wallets.values()).flat();
-    (async () => await Promise.all(Array.from(tradings)
+    return Promise.all(Array.from(tradings)
         .filter(trading => trading.state !== TradingState.STOP)
-        .map(trading => this.startMarketMaking(trading)))
-    )();
+        .map(trading => this.startMarketMaking(trading)));
   }
 
   private async startMarketMaking(trading: Trading) {
