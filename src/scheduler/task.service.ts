@@ -61,8 +61,8 @@ export class TasksService {
       .then(wallets => this.addWallets(wallets));
     this.addNewInterval(
       'Market Making',
-      +interval,
-      async () => await asyncCallWithTimeout(this.startMarketMakings, interval),
+      interval,
+      async () => await asyncCallWithTimeout(this.startMarketMakings(), interval),
     );
   }
 
