@@ -1,10 +1,9 @@
 import { Trading } from "./trading";
-import { asc, desc } from "../util/util";
+import { desc } from "../util/util";
 import { KujiraService } from "../kujira/kujira.service";
 import { Logger } from "@nestjs/common";
 import { TradingState } from "./trading-state";
 import { TradingOrders } from "./trading-orders";
-import { OrderRequestDelta } from "./order-request-delta";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { MessageEvent } from "../event/message.event";
 import { OrderFilledEvent } from "../event/order-filled.event";
@@ -23,11 +22,13 @@ export class TradingStateExecutor {
   ) {}
 
   async next(trading: Trading, kujira: KujiraService) {
-    const { state, wallet, contract, deltaRates, targetRate } = trading;
+    const { state, wallet, contract } = trading;
     const [baseSymbol, quoteSymbol] = contract.symbols;
     let currentOrders: TradingOrders;
     let marketPrice: number;
     switch (state) {
+      case TradingState.STOP:
+        break;
       case TradingState.INITIALIZE:
         marketPrice = await kujira.getMarketPrice(wallet, contract);
         trading.balance = await kujira.getTradingBalance(wallet, contract);
@@ -65,6 +66,7 @@ export class TradingStateExecutor {
         return;
       case TradingState.ORDER_CHECK:
         marketPrice = await kujira.getMarketPrice(wallet, contract);
+        this.logger.debug(`market price: ${marketPrice}`)
         if (!trading.isChangedPrice(marketPrice)) {
           return;
         }

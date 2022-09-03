@@ -13,8 +13,6 @@ export class Trading {
 
   private _balance: TradingBalance;
 
-  public ongoing: boolean = false;
-
   private _preparedOrders: OrderRequest[] = [];
 
   private _fulfilledOrders: Order[] = [];

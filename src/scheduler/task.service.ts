@@ -14,6 +14,22 @@ import { WalletDto } from "../dto/wallet.dto";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { WalletService } from "../service/wallet.service";
 
+const asyncCallWithTimeout = async (asyncPromise, timeLimit) => {
+  let timeoutHandle;
+
+  const timeoutPromise = new Promise((_resolve, reject) => {
+    timeoutHandle = setTimeout(
+      () => reject(new Error('Async call timeout limit reached')),
+      timeLimit
+    );
+  });
+
+  return Promise.race([asyncPromise, timeoutPromise]).then(result => {
+    clearTimeout(timeoutHandle);
+    return result;
+  })
+}
+
 @Injectable()
 export class TasksService {
 
@@ -46,7 +62,7 @@ export class TasksService {
     this.addNewInterval(
       'Market Making',
       +interval,
-      () => this.startMarketMakings(),
+      async () => await asyncCallWithTimeout(() => this.startMarketMakings(), interval),
     );
   }
 
@@ -168,17 +184,17 @@ export class TasksService {
 
   startMarketMakings() {
     const tradings = Array.from(this.wallets.values()).flat();
-    (async () => await Promise.all(Array.from(tradings).map(trading => this.startMarketMaking(trading))))();
+    (async () => await Promise.all(Array.from(tradings)
+        .filter(trading => trading.state !== TradingState.STOP)
+        .map(trading => this.startMarketMaking(trading)))
+    )();
   }
 
   private async startMarketMaking(trading: Trading) {
-    if (trading.ongoing || trading.state === TradingState.STOP) return;
-    trading.ongoing = true;
     const beforeState = trading.state;
     this.logger.log(`[start] ${trading.uuid} ${trading.contract.market} ${beforeState}`);
     try {
       await this.executor.next(trading, this.kujiraService);
-      trading.ongoing = false;
     } catch (e) {
       if (e instanceof Error) {
         this.logger.error(e.stack);
@@ -188,7 +204,6 @@ export class TasksService {
     } finally {
       const afterState = trading.state;
       this.logger.log(`[end] ${trading.uuid} ${trading.contract.market} ${beforeState} ${beforeState !== afterState ? `=> ${afterState}` : ""}`);
-      trading.ongoing = false;
     }
   }
 }
