@@ -14,22 +14,6 @@ import { WalletDto } from "../dto/wallet.dto";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { WalletService } from "../service/wallet.service";
 
-const asyncCallWithTimeout = async (asyncPromise, timeLimit) => {
-  let timeoutHandle;
-
-  const timeoutPromise = new Promise((_resolve, reject) => {
-    timeoutHandle = setTimeout(
-      () => reject(new Error('Async call timeout limit reached')),
-      timeLimit
-    );
-  });
-
-  return Promise.race([asyncPromise, timeoutPromise]).then(result => {
-    clearTimeout(timeoutHandle);
-    return result;
-  })
-}
-
 @Injectable()
 export class TasksService {
 
@@ -62,7 +46,7 @@ export class TasksService {
     this.addNewInterval(
       'Market Making',
       interval,
-      async () => await asyncCallWithTimeout(this.startMarketMakings(), interval),
+      async () => await this.asyncCallWithTimeout(this.startMarketMakings(), interval),
     );
   }
 
@@ -204,5 +188,22 @@ export class TasksService {
       const afterState = trading.state;
       this.logger.log(`[end] ${trading.uuid} ${trading.contract.market} ${beforeState} ${beforeState !== afterState ? `=> ${afterState}` : ""}`);
     }
+  }
+
+  async asyncCallWithTimeout(asyncPromise, timeLimit) {
+    let timeoutHandle;
+
+    const timeoutPromise = new Promise((_resolve, reject) => {
+      timeoutHandle = setTimeout(
+        () => reject(new Error('Async call timeout limit reached')),
+        timeLimit
+      );
+    });
+
+    return Promise.race([asyncPromise, timeoutPromise]).then(result => {
+      clearTimeout(timeoutHandle);
+      return result;
+    })
+      .catch(e => this.logger.error(e));
   }
 }
