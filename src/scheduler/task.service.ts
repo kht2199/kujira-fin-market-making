@@ -50,7 +50,8 @@ export class TasksService {
     this.addNewInterval(
       'Market Making',
       interval,
-      async () => await this.asyncCallWithTimeout(this.startMarketMakings(), interval),
+      async () => await this.asyncCallWithTimeout(this.startMarketMakings(), interval)
+        .catch(err => console.error(err)),
     );
   }
 
