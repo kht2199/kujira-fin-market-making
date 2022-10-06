@@ -1,12 +1,6 @@
-import coinsJson from "../../denoms.json";
-
 export class Contract {
   static readonly denomSymbolMap: Map<string, { denom: Denom, symbol: string, decimal: number }> =
     new Map<string, { denom: Denom, symbol: string, decimal: number }>();
-
-  static {
-    coinsJson.forEach((c) => Contract.denomSymbolMap.set(c.denom, c))
-  }
 
   public readonly address: string;
   public readonly denoms: {

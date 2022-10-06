@@ -1,5 +1,4 @@
 import { coins, DeliverTxResponse, GasPrice, MsgSendEncodeObject } from "@cosmjs/stargate";
-import * as kujiraClient from "kujira.js";
 import { FinClient, registry, tx } from "kujira.js";
 import { MsgSend } from "cosmjs-types/cosmos/bank/v1beta1/tx";
 import { ExecuteResult, SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
@@ -148,7 +147,7 @@ export class KujiraClientService {
   }
 
   async ordersWithdraw(wallet: Wallet, contract: Contract, orders: Order[]) {
-    const client = new kujiraClient.FinClient(
+    const client = new FinClient(
       wallet.client,
       wallet.account.address,
       contract.address,

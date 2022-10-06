@@ -1,7 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { HttpService } from "@nestjs/axios";
 import { Trading } from "../app/trading";
-import data from "../../contracts.json";
 import { KujiraClientService } from "./kujira-client-service";
 import { TradingBalance } from "../app/trading-balance";
 import { TradingOrders } from "../app/trading-orders";
@@ -11,18 +10,34 @@ import { Coin } from "@cosmjs/stargate";
 import { OrderRequest } from "../app/order-request";
 import { OrderRequestDelta } from "../app/order-request-delta";
 import { asc, desc } from "../util/util";
+import { lastValueFrom, map } from "rxjs";
+
+const configPath = 'https://raw.githubusercontent.com/kht2199/kujira-config/main/';
 
 @Injectable()
 export class KujiraService {
   // noinspection JSUnusedLocalSymbols
   private readonly logger = new Logger(KujiraService.name);
 
-  private contracts: Contract[] = data.map(d => new Contract(d)) as Contract[];
+  private contracts: Contract[];
 
   constructor(
     private readonly httpService: HttpService,
     private readonly client: KujiraClientService,
   ) {
+    // TODO research how to use observable.
+    lastValueFrom(httpService.get(`${configPath}denoms.json`)
+      .pipe(map(res => res.data))
+    )
+      .then(res => res.forEach((c) => Contract.denomSymbolMap.set(c.denom, c)))
+      .then(() => {
+        lastValueFrom(httpService.get(`${configPath}contract/markets.json`)
+          .pipe(
+            map(res => res.data.map(d => new Contract(d)))
+          )
+        )
+          .then(res => this.contracts = res);
+      });
   }
 
   async connect(endpoint: string, mnemonic: string): Promise<Wallet> {

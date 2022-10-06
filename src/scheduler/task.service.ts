@@ -13,6 +13,9 @@ import { MessageEvent } from "../event/message.event";
 import { WalletDto } from "../dto/wallet.dto";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { WalletService } from "../service/wallet.service";
+import { Contract } from "../app/contract";
+import { lastValueFrom, map } from "rxjs";
+import { HttpService } from "@nestjs/axios";
 
 @Injectable()
 export class TasksService {
@@ -29,7 +32,8 @@ export class TasksService {
     private readonly walletService: WalletService,
     private readonly tradingService: TradingService,
     private readonly emitter: EventEmitter2,
-    private readonly kujiraService: KujiraService
+    private readonly kujiraService: KujiraService,
+    private readonly httpService: HttpService,
   ) {
     this.executor = new TradingStateExecutor(emitter);
     const interval = +process.env.INTERVAL || 10000;
